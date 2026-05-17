@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db, firebaseReady } from "../firebase";
 
-export default function useTransactions() {
+export default function useTransactions(user) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,8 +17,18 @@ export default function useTransactions() {
       return;
     }
 
+    if (!user?.uid) {
+      setTransactions([]);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     const transactionsRef = collection(db, "transactions");
-    const transactionsQuery = query(transactionsRef);
+    const transactionsQuery = query(
+      transactionsRef,
+      where("userId", "==", user.uid),
+    );
 
     const unsubscribe = onSnapshot(
       transactionsQuery,
@@ -47,7 +57,7 @@ export default function useTransactions() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [user?.uid]);
 
   return { transactions, loading, error };
 }

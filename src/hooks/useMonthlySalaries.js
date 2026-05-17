@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db, firebaseReady } from "../firebase";
 import { getPeriodKey } from "../utils/transactionStats";
 
-export default function useMonthlySalaries() {
+export default function useMonthlySalaries(user, periodKey = "") {
   const [salaryByPeriod, setSalaryByPeriod] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -18,10 +18,24 @@ export default function useMonthlySalaries() {
       return;
     }
 
+    if (!user?.uid) {
+      setSalaryByPeriod({});
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     const budgetsRef = collection(db, "monthlyBudgets");
+    const queryParts = [where("userId", "==", user.uid)];
+
+    if (periodKey) {
+      queryParts.push(where("periodKey", "==", periodKey));
+    }
+
+    const budgetsQuery = query(budgetsRef, ...queryParts);
 
     const unsubscribe = onSnapshot(
-      budgetsRef,
+      budgetsQuery,
       (snapshot) => {
         const nextSalaryByPeriod = {};
 
@@ -50,7 +64,7 @@ export default function useMonthlySalaries() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [user?.uid, periodKey]);
 
   return { salaryByPeriod, loading, error };
 }

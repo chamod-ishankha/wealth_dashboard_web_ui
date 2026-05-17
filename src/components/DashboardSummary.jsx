@@ -5,6 +5,36 @@ import {
   getPeriodKey,
 } from "../utils/transactionStats";
 
+function formatTimestamp(timestamp) {
+  if (!timestamp) return "—";
+
+  // If it's a Firestore Timestamp object with toDate method
+  if (timestamp.toDate) {
+    const date = timestamp.toDate();
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  // If it's already a Date object
+  if (timestamp instanceof Date) {
+    return timestamp.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  // If it's a string, return as is
+  if (typeof timestamp === "string") {
+    return timestamp;
+  }
+
+  return "—";
+}
+
 export default function DashboardSummary({
   month,
   budgetLimit,
@@ -146,8 +176,8 @@ export default function DashboardSummary({
           />
         </label>
         <StatCard
-          label="Total Expenses"
-          value={formatCurrency(selectedMonthSummary.totalExpenses)}
+          label="Fixed Expenses"
+          value={formatCurrency(selectedMonthSummary.fixedExpenses)}
           accent="amber"
         />
         <StatCard
@@ -155,6 +185,33 @@ export default function DashboardSummary({
           value={formatCurrency(selectedMonthSummary.netSavings)}
           accent="emerald"
         />
+      </div>
+
+      <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <h4 className="text-sm font-semibold text-slate-900">
+              Personal Expenses
+            </h4>
+            <p className="mt-1 text-xs text-slate-500">
+              Counted against budget limit
+            </p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900">
+              {formatCurrency(selectedMonthSummary.personalExpenses)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <h4 className="text-sm font-semibold text-slate-900">
+              Fixed Expenses
+            </h4>
+            <p className="mt-1 text-xs text-slate-500">
+              Not counted against limit
+            </p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900">
+              {formatCurrency(selectedMonthSummary.fixedExpenses)}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-6">
@@ -175,7 +232,9 @@ export default function DashboardSummary({
         </div>
 
         <div className={`rounded-2xl border px-5 py-4 ${remainingTone}`}>
-          <p className="text-sm font-medium opacity-80">Remaining Budget</p>
+          <p className="text-sm font-medium opacity-80">
+            Remaining Personal Budget
+          </p>
           <p className="mt-1 text-3xl font-semibold tracking-tight">
             {formatCurrency(selectedMonthSummary.remainingBudget)}
           </p>
@@ -224,7 +283,7 @@ export default function DashboardSummary({
                           }
                         >
                           <td className="px-4 py-3 text-slate-700">
-                            {transaction.date || "—"}
+                            {formatTimestamp(transaction.date)}
                           </td>
                           <td className="px-4 py-3 text-slate-700">
                             {transaction.dayOfWeek || "—"}

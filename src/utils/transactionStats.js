@@ -73,21 +73,40 @@ export function calculateMonthlySummary(
     monthlyTransactions,
     (transaction) => transaction.transactionType === "income",
   );
-  const totalExpenses = sumTransactions(
+
+  // Separate Personal expenses from Fixed expenses
+  const personalExpenses = sumTransactions(
     monthlyTransactions,
-    (transaction) => transaction.transactionType === "expense",
+    (transaction) =>
+      transaction.transactionType === "expense" &&
+      transaction.category === "Personal",
   );
+
+  const fixedExpenses = sumTransactions(
+    monthlyTransactions,
+    (transaction) =>
+      transaction.transactionType === "expense" &&
+      transaction.category !== "Personal",
+  );
+
+  const totalExpenses = personalExpenses + fixedExpenses;
+
   const monthlySalary =
     Number.isFinite(Number(salaryOverride)) && Number(salaryOverride) > 0
       ? Number(salaryOverride)
       : totalIncome;
+
   const netSavings = monthlySalary - totalExpenses;
-  const remainingBudget = budgetLimit - totalExpenses;
+
+  // Budget limit applies only to Personal expenses
+  const remainingBudget = budgetLimit - personalExpenses;
 
   return {
     monthlyTransactions,
     totalIncome,
     totalExpenses,
+    personalExpenses,
+    fixedExpenses,
     monthlySalary,
     netSavings,
     remainingBudget,
