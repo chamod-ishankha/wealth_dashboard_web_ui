@@ -228,8 +228,7 @@ export default function App() {
     }
 
     const year = selectedDate.getFullYear();
-    const monthName = selectedDate.toLocaleString("en-US", { month: "long" });
-    const dayOfWeek = selectedDate.toLocaleString("en-US", { weekday: "long" });
+    const monthIndex = selectedDate.getMonth();
     const transactionType = getTransactionType(formData.category);
     const amount = Number(formData.amount);
 
@@ -241,9 +240,7 @@ export default function App() {
       userId: user.uid,
       date: Timestamp.fromDate(selectedDate),
       year,
-      month: monthName,
-      monthIndex: selectedDate.getMonth(),
-      dayOfWeek,
+      monthIndex,
       category: formData.category,
       transactionType,
       amount,
@@ -253,7 +250,7 @@ export default function App() {
       .then(() => {
         setFormData({
           date: "",
-          category: "Fuel",
+          category: categories && categories.length > 0 ? categories[0] : "",
           amount: "",
           description: "",
         });
@@ -346,16 +343,13 @@ export default function App() {
     }
 
     const year = selectedDate.getFullYear();
-    const monthName = selectedDate.toLocaleString("en-US", { month: "long" });
-    const dayOfWeek = selectedDate.toLocaleString("en-US", { weekday: "long" });
+    const monthIndex = selectedDate.getMonth();
 
     updateDoc(doc(db, "transactions", editingTransaction.id), {
       userId: user.uid,
       date: Timestamp.fromDate(selectedDate),
       year,
-      month: monthName,
-      monthIndex: selectedDate.getMonth(),
-      dayOfWeek,
+      monthIndex,
       category: editingTransaction.category,
       transactionType: getTransactionType(editingTransaction.category),
       amount,

@@ -4,6 +4,7 @@ import {
   calculateMonthlySummary,
   getPeriodKey,
 } from "../utils/transactionStats";
+import SafeToSpendCalculator from "./SafeToSpendCalculator";
 
 function formatTimestamp(timestamp) {
   if (!timestamp) return "—";
@@ -239,6 +240,22 @@ export default function DashboardSummary({
             {formatCurrency(selectedMonthSummary.remainingBudget)}
           </p>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <SafeToSpendCalculator
+          budgetLimit={budgetLimit}
+          personalExpensesSpent={selectedMonthSummary.personalExpenses}
+          year={selectedYear || new Date().getFullYear()}
+          monthIndex={
+            selectedMonth
+              ? new Date(
+                  `${selectedMonth} 1, ${selectedYear || new Date().getFullYear()}`,
+                ).getMonth()
+              : new Date().getMonth()
+          }
+          formatCurrency={formatCurrency}
+        />
       </div>
 
       <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">

@@ -1,3 +1,18 @@
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 const MONTH_ORDER = {
   January: 1,
   February: 2,
@@ -12,6 +27,16 @@ const MONTH_ORDER = {
   November: 11,
   December: 12,
 };
+
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 export const EXPENSE_CATEGORIES = new Set([
   "Fuel",
@@ -58,11 +83,11 @@ export function calculateMonthlySummary(
 ) {
   const monthlyTransactions = transactions.filter((transaction) => {
     const transactionYear = Number(
-      transaction.year ?? new Date(transaction.date).getFullYear(),
+      transaction.year ??
+        (transaction.date ? new Date(transaction.date).getFullYear() : NaN),
     );
-    const transactionMonth =
-      transaction.month ??
-      new Date(transaction.date).toLocaleString("en-US", { month: "long" });
+
+    const transactionMonth = getTransactionMonth(transaction);
 
     return (
       String(transactionYear) === String(year) && transactionMonth === month
@@ -118,14 +143,12 @@ export function groupTransactionsByYearMonth(transactions = []) {
 
   for (const transaction of transactions) {
     const year = Number(
-      transaction.year ?? new Date(transaction.date).getFullYear(),
+      transaction.year ??
+        (transaction.date ? new Date(transaction.date).getFullYear() : NaN),
     );
-    const month =
-      transaction.month ??
-      new Date(transaction.date).toLocaleString("en-US", { month: "long" });
-    const monthIndex = Number(
-      transaction.monthIndex ?? MONTH_ORDER[month] ?? 0,
-    );
+
+    const month = getTransactionMonth(transaction);
+    const monthIndex = Number(getTransactionMonthIndex(transaction) ?? 0);
     const key = `${year}-${String(monthIndex).padStart(2, "0")}`;
 
     if (!groups.has(key)) {
@@ -176,4 +199,230 @@ export function getAvailableMonthsForYear(
 
 export function getPeriodKey(year, month) {
   return `${year}-${month}`;
+}
+
+/**
+ * SCHEMA OPTIMIZATION FUNCTIONS
+ * Compute derived values from minimal stored data
+ */
+
+/**
+ * Get day of week name from Firestore Timestamp or Date
+ * @param {Timestamp|Date|number} dateInput - Firestore Timestamp or JS Date
+ * @returns {string} - Day name: "Monday", "Tuesday", etc.
+ */
+export function getDayOfWeek(dateInput) {
+  if (!dateInput) return "—";
+
+  let jsDate;
+  if (dateInput.toDate) {
+    jsDate = dateInput.toDate(); // Firestore Timestamp
+  } else if (dateInput instanceof Date) {
+    jsDate = dateInput;
+  } else if (typeof dateInput === "number") {
+    jsDate = new Date(dateInput);
+  } else {
+    return "—";
+  }
+
+  const dayIndex = jsDate.getDay(); // 0-6, Sunday-Saturday
+  return DAY_NAMES[dayIndex] || "—";
+}
+
+/**
+ * Get full month name from monthIndex (0-11)
+ * @param {number} monthIndex - 0=January, 11=December
+ * @returns {string} - Month name: "January", "February", etc.
+ */
+export function getMonthName(monthIndex) {
+  const index = Number(monthIndex);
+  if (!Number.isFinite(index) || index < 0 || index > 11) {
+    return "—";
+  }
+  return MONTH_NAMES[index];
+}
+
+/**
+ * Backward-compatible helpers for transaction display
+ */
+export function getTransactionMonth(transaction) {
+  // Prefer explicit stored month (backwards compat)
+  if (!transaction) return "—";
+  if (transaction.month && typeof transaction.month === "string") {
+    return transaction.month;
+  }
+
+  // If monthIndex stored, use it
+  if (
+    transaction.monthIndex !== undefined &&
+    transaction.monthIndex !== null &&
+    Number.isFinite(Number(transaction.monthIndex))
+  ) {
+    return getMonthName(Number(transaction.monthIndex));
+  }
+
+  // Fallback to date
+  if (transaction.date) {
+    try {
+      const d = transaction.date.toDate
+        ? transaction.date.toDate()
+        : new Date(transaction.date);
+      return MONTH_NAMES[d.getMonth()];
+    } catch (err) {
+      return "—";
+    }
+  }
+
+  return "—";
+}
+
+export function getTransactionMonthIndex(transaction) {
+  if (!transaction) return 0;
+  if (transaction.monthIndex !== undefined && transaction.monthIndex !== null) {
+    const idx = Number(transaction.monthIndex);
+    if (Number.isFinite(idx)) return idx;
+  }
+
+  if (transaction.month && typeof transaction.month === "string") {
+    const m = MONTH_ORDER[transaction.month] ?? null;
+    if (m) return m - 1; // MONTH_ORDER uses 1-based
+  }
+
+  if (transaction.date) {
+    try {
+      const d = transaction.date.toDate
+        ? transaction.date.toDate()
+        : new Date(transaction.date);
+      return d.getMonth();
+    } catch (err) {
+      return 0;
+    }
+  }
+
+  return 0;
+}
+
+export function getTransactionDay(transaction) {
+  if (!transaction) return "—";
+  if (transaction.dayOfWeek && typeof transaction.dayOfWeek === "string") {
+    return transaction.dayOfWeek;
+  }
+
+  return getDayOfWeek(transaction.date);
+}
+
+/**
+ * Get number of days in a month
+ * @param {number} year - e.g., 2026
+ * @param {number} monthIndex - 0-11
+ * @returns {number} - Days in month (28-31)
+ */
+export function getMonthDaysCount(year, monthIndex) {
+  const nextMonth = new Date(year, Number(monthIndex) + 1, 0);
+  return nextMonth.getDate();
+}
+
+/**
+ * Calculate remaining days in month from a given date
+ * @param {number} year - e.g., 2026
+ * @param {number} monthIndex - 0-11
+ * @param {number} dayOfMonth - 1-31, defaults to today
+ * @returns {number} - Days remaining (including current day)
+ */
+export function getRemainingDaysInMonth(year, monthIndex, dayOfMonth = null) {
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+
+  // If checking current month, use today's date
+  if (year === currentYear && monthIndex === currentMonth) {
+    const daysInMonth = getMonthDaysCount(year, monthIndex);
+    const todayDay = today.getDate();
+    return daysInMonth - todayDay + 1; // +1 to include today
+  }
+
+  // For past/future months, use provided day or first day
+  const day = dayOfMonth || 1;
+  const daysInMonth = getMonthDaysCount(year, monthIndex);
+  return daysInMonth - day + 1;
+}
+
+/**
+ * Calculate "Safe-to-Spend" daily amount
+ * Formula: (Remaining Budget) / (Remaining Days in Month)
+ * @param {number} budgetLimit - Total personal budget for month
+ * @param {number} personalExpensesSpent - Amount already spent
+ * @param {number} year - Current year
+ * @param {number} monthIndex - Current month (0-11)
+ * @returns {object} - { dailySafeSpend, remainingBudget, remainingDays, status }
+ */
+export function calculateSafeToSpend(
+  budgetLimit,
+  personalExpensesSpent,
+  year,
+  monthIndex,
+) {
+  const remainingBudget = budgetLimit - personalExpensesSpent;
+  const remainingDays = getRemainingDaysInMonth(year, monthIndex);
+
+  if (remainingDays <= 0) {
+    return {
+      dailySafeSpend: 0,
+      remainingBudget,
+      remainingDays: 0,
+      status: "month-ended",
+    };
+  }
+
+  const dailySafeSpend =
+    remainingBudget > 0 ? Math.floor(remainingBudget / remainingDays) : 0;
+
+  let status = "on-track";
+  if (remainingBudget < 0) {
+    status = "budget-exceeded";
+  } else if (remainingBudget === 0) {
+    status = "budget-exhausted";
+  } else if (dailySafeSpend === 0 && remainingBudget > 0) {
+    status = "minimal-remaining";
+  }
+
+  return {
+    dailySafeSpend,
+    remainingBudget,
+    remainingDays,
+    status,
+  };
+}
+
+/**
+ * Format transaction timestamp for display
+ * Handles Firestore Timestamp, JS Date, or string
+ * @param {Timestamp|Date|string} timestamp - Date to format
+ * @returns {string} - Formatted date: "May 17, 2026"
+ */
+export function formatTimestampToDate(timestamp) {
+  if (!timestamp) return "—";
+
+  let jsDate;
+  if (timestamp.toDate) {
+    jsDate = timestamp.toDate(); // Firestore Timestamp
+  } else if (timestamp instanceof Date) {
+    jsDate = timestamp;
+  } else if (typeof timestamp === "string") {
+    jsDate = new Date(timestamp);
+  } else if (typeof timestamp === "number") {
+    jsDate = new Date(timestamp);
+  } else {
+    return "—";
+  }
+
+  if (!(jsDate instanceof Date) || Number.isNaN(jsDate.getTime())) {
+    return "—";
+  }
+
+  return jsDate.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
