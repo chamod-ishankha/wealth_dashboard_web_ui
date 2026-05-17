@@ -26,6 +26,7 @@ export default function DashboardSummary({
   onYearChange,
   onMonthChange,
   onDeleteTransaction,
+  onEditTransaction,
 }) {
   const selectedPeriodLabel =
     selectedYear && selectedMonth ? `${selectedMonth} ${selectedYear}` : month;
@@ -246,15 +247,24 @@ export default function DashboardSummary({
                             {formatCurrency(Number(transaction.amount || 0))}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                onDeleteTransaction?.(transaction.id)
-                              }
-                              className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
-                            >
-                              Delete
-                            </button>
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => onEditTransaction?.(transaction)}
+                                className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onDeleteTransaction?.(transaction.id)
+                                }
+                                className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
