@@ -17,6 +17,7 @@ import { useAuth } from "./context/AuthContext";
 import useMonthlySalaries from "./hooks/useMonthlySalaries";
 import useTransactions from "./hooks/useTransactions";
 import useCategories from "./hooks/useCategories";
+import useInstallments from "./hooks/useInstallments";
 import {
   calculateMonthlySummary,
   getAvailableMonthsForYear,
@@ -90,6 +91,8 @@ export default function App() {
     loading: salaryLoading,
     error: salaryError,
   } = useMonthlySalaries(user, activePeriodKey);
+  const { addInstallment } = useInstallments(user);
+  const [installmentSubmitting, setInstallmentSubmitting] = useState(false);
 
   // Fetch user categories
   const { categories, loading: categoriesLoading } = useCategories(user);
@@ -280,6 +283,24 @@ export default function App() {
     });
   }
 
+  async function handleInstallmentSubmit(installmentPayload) {
+    if (!addInstallment || installmentSubmitting) {
+      return;
+    }
+
+    try {
+      setInstallmentSubmitting(true);
+      const ok = await addInstallment(installmentPayload);
+      if (ok) {
+        setActiveTab("dashboard");
+      }
+    } catch (submitError) {
+      console.error("Failed to save installment:", submitError);
+    } finally {
+      setInstallmentSubmitting(false);
+    }
+  }
+
   function handleOpenEditTransaction(transaction) {
     if (!transaction) {
       return;
@@ -418,6 +439,8 @@ export default function App() {
                   formData={formData}
                   onChange={handleChange}
                   onSubmit={handleSubmit}
+                  onInstallmentSubmit={handleInstallmentSubmit}
+                  installmentSubmitting={installmentSubmitting}
                 />
               ) : (
                 <DashboardSummary

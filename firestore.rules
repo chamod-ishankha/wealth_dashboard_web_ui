@@ -41,7 +41,7 @@ service cloud.firestore {
         && request.resource.data.periodKey is string
         && request.resource.data.monthlySalary is number;
 
-      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
 
       // on update ensure userId unchanged
       allow update: if isSignedIn()
@@ -49,6 +49,40 @@ service cloud.firestore {
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.periodKey is string
         && request.resource.data.monthlySalary is number;
+    }
+
+    // Active installments / goals: scoped to owner
+    match /activeInstallments/{installmentId} {
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.type is string
+        && request.resource.data.category is string
+        && request.resource.data.status is string
+        && request.resource.data.totalAmount is number
+        && request.resource.data.targetAmount is number
+        && request.resource.data.currentAmount is number
+        && request.resource.data.monthlyAmount is number
+        && request.resource.data.monthlyContribution is number
+        && request.resource.data.totalMonths is number;
+
+      allow read, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        // prevent ownership transfer
+        && request.resource.data.userId == resource.data.userId
+        // core shape checks
+        && request.resource.data.name is string
+        && request.resource.data.type is string
+        && request.resource.data.category is string
+        && request.resource.data.status is string
+        && request.resource.data.totalAmount is number
+        && request.resource.data.targetAmount is number
+        && request.resource.data.currentAmount is number
+        && request.resource.data.monthlyAmount is number
+        && request.resource.data.monthlyContribution is number
+        && request.resource.data.totalMonths is number;
     }
 
     // Users collection: only the user may read/update their own profile

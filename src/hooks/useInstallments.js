@@ -34,13 +34,15 @@ export default function useInstallments(user) {
         query(
           collection(db, "activeInstallments"),
           where("userId", "==", user.uid),
-          where("status", "!=", "deleted"),
         ),
         (snapshot) => {
-          const data = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          const data = snapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }))
+            // Avoid composite index requirement by filtering deleted docs client-side.
+            .filter((item) => item.status !== "deleted");
 
           // Sort by createdAt descending
           data.sort((a, b) => {
@@ -79,9 +81,24 @@ export default function useInstallments(user) {
         userId: user.uid,
         name: installmentData.name || "Untitled Goal",
         type: installmentData.type || "goal", // "loan", "koko", "goal"
-        targetAmount: Number(installmentData.targetAmount || 0),
+        totalAmount: Number(
+          installmentData.totalAmount || installmentData.targetAmount || 0,
+        ),
+        targetAmount: Number(
+          installmentData.targetAmount || installmentData.totalAmount || 0,
+        ),
         currentAmount: Number(installmentData.currentAmount || 0),
-        monthlyContribution: Number(installmentData.monthlyContribution || 0),
+        monthlyAmount: Number(
+          installmentData.monthlyAmount ||
+            installmentData.monthlyContribution ||
+            0,
+        ),
+        monthlyContribution: Number(
+          installmentData.monthlyContribution ||
+            installmentData.monthlyAmount ||
+            0,
+        ),
+        totalMonths: Number(installmentData.totalMonths || 0),
         startDate: installmentData.startDate || new Date(),
         targetDate: installmentData.targetDate || null,
         category: installmentData.category || "Other", // Links to transaction category
@@ -115,6 +132,48 @@ export default function useInstallments(user) {
       return true;
     } catch (err) {
       console.error("Error updating installment:", err);
+      setError(err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Update installment details
+   */
+  async function updateInstallment(installmentId, installmentData) {
+    if (!user?.uid || !db || !installmentId) return false;
+
+    try {
+      await updateDoc(doc(db, "activeInstallments", installmentId), {
+        name: installmentData.name || "Untitled Goal",
+        type: installmentData.type || "goal",
+        totalAmount: Number(
+          installmentData.totalAmount || installmentData.targetAmount || 0,
+        ),
+        targetAmount: Number(
+          installmentData.targetAmount || installmentData.totalAmount || 0,
+        ),
+        currentAmount: Number(installmentData.currentAmount || 0),
+        monthlyAmount: Number(
+          installmentData.monthlyAmount ||
+            installmentData.monthlyContribution ||
+            0,
+        ),
+        monthlyContribution: Number(
+          installmentData.monthlyContribution ||
+            installmentData.monthlyAmount ||
+            0,
+        ),
+        totalMonths: Number(installmentData.totalMonths || 0),
+        targetDate: installmentData.targetDate || null,
+        category: installmentData.category || "Other",
+        description: installmentData.description || "",
+        updatedAt: serverTimestamp(),
+      });
+
+      return true;
+    } catch (err) {
+      console.error("Error updating installment details:", err);
       setError(err.message);
       return false;
     }
@@ -204,6 +263,7 @@ export default function useInstallments(user) {
     loading,
     error,
     addInstallment,
+    updateInstallment,
     updateInstallmentProgress,
     toggleInstallmentStatus,
     deleteInstallment,

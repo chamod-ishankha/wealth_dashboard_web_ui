@@ -5,7 +5,7 @@
  */
 export default function InstallmentProgressBar({
   installment = {},
-  formatCurrency = (val) => `$${val.toFixed(0)}`,
+  formatCurrency = null,
   onEdit = null,
   onPause = null,
 }) {
@@ -14,22 +14,44 @@ export default function InstallmentProgressBar({
     icon = "🎯",
     currentAmount = 0,
     targetAmount = 100000,
+    totalAmount,
     monthlyContribution = 10000,
+    monthlyAmount,
+    totalMonths = 0,
     targetDate = null,
     status = "active",
     color = "#3B82F6",
   } = installment;
 
+  const principalAmount = Number(totalAmount || targetAmount || 0);
+  const monthlyInstallment = Number(monthlyAmount || monthlyContribution || 0);
+  const installmentCount = Number(totalMonths || 0);
+  const totalPayable = monthlyInstallment * installmentCount;
+  const totalInterest = Math.max(0, totalPayable - principalAmount);
+
+  const money = (value) => {
+    if (typeof formatCurrency === "function") {
+      return formatCurrency(Number(value || 0));
+    }
+
+    return new Intl.NumberFormat("en-LK", {
+      style: "currency",
+      currency: "LKR",
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0));
+  };
+
   // Calculate progress percentage
   const progressPercent = Math.min(
     100,
-    Math.round((currentAmount / targetAmount) * 100),
+    Math.round(
+      (Number(currentAmount || 0) / Math.max(1, principalAmount)) * 100,
+    ),
   );
 
   // Calculate completion status
   const isCompleted = progressPercent >= 100;
   const isPaused = status === "paused";
-  const isActive = status === "active";
 
   // Calculate months remaining if target date exists
   let monthsRemaining = null;
@@ -64,22 +86,20 @@ export default function InstallmentProgressBar({
   const config = statusConfig[status] || statusConfig.active;
 
   return (
-    <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-soft transition-all duration-300 hover:shadow-md">
+    <div className="group flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-soft transition-all duration-300 hover:shadow-md sm:p-5">
       {/* Header with Name and Status */}
-      <div className="mb-4 flex items-start justify-between">
-        <div className="flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <span className="text-3xl">{icon}</span>
-          <div>
-            <h4 className="font-semibold text-slate-900">{name}</h4>
-            <p className="text-xs text-slate-500">
-              {monthlyContribution
-                ? `${formatCurrency(monthlyContribution)}/month`
-                : "—"}
+          <div className="min-w-0">
+            <h4 className="truncate font-semibold text-slate-900">{name}</h4>
+            <p className="truncate text-xs text-slate-500">
+              {monthlyInstallment ? `${money(monthlyInstallment)}/month` : "—"}
             </p>
           </div>
         </div>
         <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${config.badge}`}
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${config.badge}`}
         >
           {config.icon} {config.message}
         </span>
@@ -93,7 +113,7 @@ export default function InstallmentProgressBar({
             style={{
               width: `${progressPercent}%`,
               backgroundColor: color,
-              boxShadow: `inset 0 1px 2px rgba(0,0,0,0.1)`,
+              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
             }}
           />
         </div>
@@ -103,17 +123,17 @@ export default function InstallmentProgressBar({
       </div>
 
       {/* Amount Grid */}
-      <div className="mb-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
-        <div>
+      <div className="mb-4 grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-2">
+        <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500">Paid</p>
-          <p className="mt-1 font-semibold text-slate-900">
-            {formatCurrency(currentAmount)}
+          <p className="mt-1 break-words text-sm font-semibold text-slate-900 sm:text-base">
+            {money(currentAmount)}
           </p>
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500">Target</p>
-          <p className="mt-1 font-semibold text-slate-900">
-            {formatCurrency(targetAmount)}
+          <p className="mt-1 break-words text-sm font-semibold text-slate-900 sm:text-base">
+            {money(principalAmount)}
           </p>
         </div>
       </div>
@@ -123,10 +143,49 @@ export default function InstallmentProgressBar({
         <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
           <p className="text-xs font-medium text-blue-600">Amount Remaining</p>
           <p className="mt-1 text-2xl font-bold text-blue-700">
-            {formatCurrency(Math.max(0, targetAmount - currentAmount))}
+            {money(Math.max(0, principalAmount - Number(currentAmount || 0)))}
           </p>
         </div>
       )}
+
+      {/* Interest Cost Analytics */}
+      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-slate-800">
+            Interest Cost Analytics
+          </p>
+          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500">
+            {installmentCount > 0 ? `${installmentCount} months` : "N/A"}
+          </span>
+        </div>
+
+        <div className="grid items-stretch gap-2 grid-cols-1">
+          <div className="flex h-full min-w-0 flex-col justify-between rounded-lg bg-white px-3 py-2">
+            <p className="min-h-8 text-xs leading-snug text-slate-500">
+              Principal Amount
+            </p>
+            <p className="mt-1 break-words text-sm font-semibold tabular-nums text-slate-900 sm:text-base">
+              {money(principalAmount)}
+            </p>
+          </div>
+          <div className="flex h-full min-w-0 flex-col justify-between rounded-lg bg-white px-3 py-2">
+            <p className="min-h-8 text-xs leading-snug text-slate-500">
+              Lease Premium / Interest
+            </p>
+            <p className="mt-1 break-words text-sm font-semibold tabular-nums text-amber-700 sm:text-base">
+              {money(totalInterest)}
+            </p>
+          </div>
+          <div className="flex h-full min-w-0 flex-col justify-between rounded-lg bg-white px-3 py-2">
+            <p className="min-h-8 text-xs leading-snug text-slate-500">
+              Total Forecasted Cost
+            </p>
+            <p className="mt-1 break-words text-sm font-semibold tabular-nums text-slate-900 sm:text-base">
+              {money(totalPayable)}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Completion Message */}
       {isCompleted && (
@@ -142,7 +201,7 @@ export default function InstallmentProgressBar({
 
       {/* Timeline Info */}
       {monthsRemaining !== null && !isCompleted && (
-        <div className="mb-4 flex items-center justify-between rounded-lg bg-slate-100 px-3 py-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-100 px-3 py-2">
           <span className="text-sm font-medium text-slate-700">
             {monthsRemaining > 0
               ? `${monthsRemaining} month${monthsRemaining !== 1 ? "s" : ""} remaining`
@@ -159,7 +218,7 @@ export default function InstallmentProgressBar({
       )}
 
       {/* Action Buttons */}
-      <div className="flex gap-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+      <div className="mt-auto flex gap-2 opacity-100 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100">
         {onEdit && (
           <button
             onClick={() => onEdit(installment)}

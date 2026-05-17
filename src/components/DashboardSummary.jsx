@@ -1,10 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import StatCard from "./StatCard";
 import {
   calculateMonthlySummary,
   getPeriodKey,
 } from "../utils/transactionStats";
 import SafeToSpendCalculator from "./SafeToSpendCalculator";
+import { useAuth } from "../context/AuthContext";
+import useInstallments from "../hooks/useInstallments";
+import InstallmentProgressBar from "./InstallmentProgressBar";
+import InstallmentSetupForm from "./InstallmentSetupForm";
 
 function formatTimestamp(timestamp) {
   if (!timestamp) return "—";
@@ -72,6 +77,38 @@ export default function DashboardSummary({
       ),
     [transactions, selectedYear, selectedMonth, budgetLimit, monthlySalary],
   );
+
+  // Installments hook
+  const { user } = useAuth();
+  const {
+    activeInstallments = [],
+    loading: installmentsLoading = false,
+    toggleInstallmentStatus,
+    updateInstallment,
+  } = useInstallments(user);
+  const [editingInstallment, setEditingInstallment] = useState(null);
+  const [savingInstallment, setSavingInstallment] = useState(false);
+
+  async function handleSaveInstallmentEdit(updatedInstallment) {
+    if (!editingInstallment?.id || !updateInstallment || savingInstallment) {
+      return;
+    }
+
+    try {
+      setSavingInstallment(true);
+      const ok = await updateInstallment(
+        editingInstallment.id,
+        updatedInstallment,
+      );
+      if (ok) {
+        setEditingInstallment(null);
+      }
+    } catch (saveError) {
+      console.error("Failed to save installment changes:", saveError);
+    } finally {
+      setSavingInstallment(false);
+    }
+  }
 
   const remainingTone =
     selectedMonthSummary.remainingBudget > 0
@@ -259,6 +296,39 @@ export default function DashboardSummary({
       </div>
 
       <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-900">Installments</h3>
+          <span className="text-sm text-slate-500">
+            {installmentsLoading
+              ? "Loading..."
+              : `${activeInstallments.length} active`}
+          </span>
+        </div>
+
+        {activeInstallments.length > 0 ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {activeInstallments.map((inst) => (
+              <InstallmentProgressBar
+                key={inst.id}
+                installment={inst}
+                formatCurrency={formatCurrency}
+                onEdit={(item) => setEditingInstallment(item)}
+                onPause={() =>
+                  toggleInstallmentStatus &&
+                  toggleInstallmentStatus(
+                    inst.id,
+                    inst.status === "paused" ? "active" : "paused",
+                  )
+                }
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">No active installments.</p>
+        )}
+      </div>
+
+      <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">
@@ -432,6 +502,40 @@ export default function DashboardSummary({
           )}
         </div>
       </div>
+
+      {editingInstallment && typeof document !== "undefined"
+        ? createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+              <div className="w-full max-w-3xl rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-xl font-semibold text-slate-900">
+                      Edit Installment
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Update your installment terms and progress details.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingInstallment(null)}
+                    className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <InstallmentSetupForm
+                  initialValues={editingInstallment}
+                  loading={savingInstallment}
+                  onSubmit={handleSaveInstallmentEdit}
+                  onCancel={() => setEditingInstallment(null)}
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }
