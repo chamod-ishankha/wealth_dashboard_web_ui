@@ -1,13 +1,25 @@
-import { useMemo, useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useEffect, useMemo, useState } from "react";
+import {
+  addDoc,
+  collection,
+  doc,
+  deleteDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import DashboardSummary from "./components/DashboardSummary";
 import StatCard from "./components/StatCard";
 import TransactionsEntryForm from "./components/TransactionsEntryForm";
+import useMonthlySalaries from "./hooks/useMonthlySalaries";
 import useTransactions from "./hooks/useTransactions";
 import {
   calculateMonthlySummary,
+  getAvailableMonthsForYear,
+  getAvailableYears,
+  getPeriodKey,
   formatCurrentMonthLabel,
   getTransactionType,
+  groupTransactionsByYearMonth,
 } from "./utils/transactionStats";
 import { db } from "./firebase";
 
@@ -32,7 +44,9 @@ function formatCurrency(value) {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("entry");
-  const [monthlySalary, setMonthlySalary] = useState(0);
+  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [salaryByPeriod, setSalaryByPeriod] = useState({});
   const [formData, setFormData] = useState({
     date: "",
     category: "Fuel",
@@ -41,25 +55,112 @@ export default function App() {
   });
 
   const { transactions, loading, error } = useTransactions();
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.toLocaleString("en-US", { month: "long" });
+  const {
+    salaryByPeriod: remoteSalaryByPeriod,
+    loading: salaryLoading,
+    error: salaryError,
+  } = useMonthlySalaries();
+
+  useEffect(() => {
+    setSalaryByPeriod((current) => ({
+      ...remoteSalaryByPeriod,
+      ...current,
+    }));
+  }, [remoteSalaryByPeriod]);
+
+  const groupedTransactions = useMemo(
+    () => groupTransactionsByYearMonth(transactions),
+    [transactions],
+  );
+  const availableYears = useMemo(
+    () => getAvailableYears(transactions),
+    [transactions],
+  );
+  const monthsForSelectedYear = useMemo(
+    () => getAvailableMonthsForYear(groupedTransactions, selectedYear),
+    [groupedTransactions, selectedYear],
+  );
+
+  useEffect(() => {
+    if (!availableYears.length) {
+      setSelectedYear("");
+      return;
+    }
+
+    const yearExists = availableYears.includes(Number(selectedYear));
+    if (!selectedYear || !yearExists) {
+      setSelectedYear(String(availableYears[0]));
+    }
+  }, [availableYears, selectedYear]);
+
+  useEffect(() => {
+    if (!selectedYear) {
+      setSelectedMonth("");
+      return;
+    }
+
+    if (!monthsForSelectedYear.length) {
+      setSelectedMonth("");
+      return;
+    }
+
+    if (!selectedMonth || !monthsForSelectedYear.includes(selectedMonth)) {
+      setSelectedMonth(monthsForSelectedYear[0]);
+    }
+  }, [selectedYear, monthsForSelectedYear, selectedMonth]);
+
+  const activePeriodKey =
+    selectedYear && selectedMonth
+      ? getPeriodKey(selectedYear, selectedMonth)
+      : "";
+  const monthlySalary = activePeriodKey
+    ? Number(salaryByPeriod[activePeriodKey] ?? 0)
+    : 0;
   const currentSummary = useMemo(
     () =>
       calculateMonthlySummary(
         transactions,
-        currentYear,
-        currentMonth,
-        20000,
+        selectedYear,
+        selectedMonth,
+        personalBudgetLimit,
         monthlySalary,
       ),
-    [transactions, currentYear, currentMonth, monthlySalary],
+    [transactions, selectedYear, selectedMonth, monthlySalary],
   );
 
   const totalExpenses = currentSummary.totalExpenses;
   const netSavings = currentSummary.netSavings;
   const remainingBudget = currentSummary.remainingBudget;
   const month = formatCurrentMonthLabel();
+
+  function handleMonthlySalaryChange(value) {
+    if (!activePeriodKey) {
+      return;
+    }
+
+    const numericValue = Number(value || 0);
+
+    setSalaryByPeriod((current) => ({
+      ...current,
+      [activePeriodKey]: numericValue,
+    }));
+
+    if (!db) {
+      return;
+    }
+
+    const [yearPart, monthPart] = activePeriodKey.split("-");
+
+    setDoc(doc(db, "monthlyBudgets", activePeriodKey), {
+      periodKey: activePeriodKey,
+      year: Number(yearPart),
+      month: monthPart,
+      monthlySalary: numericValue,
+      updatedAt: serverTimestamp(),
+    }).catch((budgetError) => {
+      console.error("Failed to save monthly salary:", budgetError);
+    });
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -116,6 +217,24 @@ export default function App() {
       .catch((submitError) => {
         console.error("Failed to save transaction:", submitError);
       });
+  }
+
+  function handleDeleteTransaction(transactionId) {
+    if (!db || !transactionId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this transaction? This action cannot be undone.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    deleteDoc(doc(db, "transactions", transactionId)).catch((deleteError) => {
+      console.error("Failed to delete transaction:", deleteError);
+    });
   }
 
   return (
@@ -176,15 +295,24 @@ export default function App() {
               <DashboardSummary
                 month={month}
                 budgetLimit={personalBudgetLimit}
+                selectedYear={selectedYear}
+                selectedMonth={selectedMonth}
+                availableYears={availableYears}
+                monthsForSelectedYear={monthsForSelectedYear}
                 monthlySalary={monthlySalary}
-                onMonthlySalaryChange={setMonthlySalary}
+                onMonthlySalaryChange={handleMonthlySalaryChange}
                 totalExpenses={totalExpenses}
                 netSavings={netSavings}
                 remainingBudget={remainingBudget}
                 formatCurrency={formatCurrency}
                 transactions={transactions}
-                loading={loading}
-                error={error}
+                groupedTransactions={groupedTransactions}
+                salaryByPeriod={salaryByPeriod}
+                loading={loading || salaryLoading}
+                error={error || salaryError}
+                onYearChange={setSelectedYear}
+                onMonthChange={setSelectedMonth}
+                onDeleteTransaction={handleDeleteTransaction}
               />
             )}
           </div>

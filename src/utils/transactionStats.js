@@ -129,3 +129,32 @@ export function groupTransactionsByYearMonth(transactions = []) {
     return right.monthIndex - left.monthIndex;
   });
 }
+
+export function getAvailableYears(transactions = []) {
+  const years = new Set();
+
+  for (const transaction of transactions) {
+    const year = Number(
+      transaction.year ?? new Date(transaction.date).getFullYear(),
+    );
+
+    if (Number.isFinite(year)) {
+      years.add(year);
+    }
+  }
+
+  return Array.from(years).sort((left, right) => right - left);
+}
+
+export function getAvailableMonthsForYear(
+  groupedTransactions = [],
+  selectedYear,
+) {
+  return groupedTransactions
+    .filter((group) => String(group.year) === String(selectedYear))
+    .map((group) => group.month);
+}
+
+export function getPeriodKey(year, month) {
+  return `${year}-${month}`;
+}
