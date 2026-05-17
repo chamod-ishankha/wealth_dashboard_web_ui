@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import DashboardSummary from "./components/DashboardSummary";
 import StatCard from "./components/StatCard";
 import TransactionsEntryForm from "./components/TransactionsEntryForm";
+import useTransactions from "./hooks/useTransactions";
+import {
+  calculateMonthlySummary,
+  formatCurrentMonthLabel,
+  getTransactionType,
+} from "./utils/transactionStats";
+import { db } from "./firebase";
 
 const categories = [
   "Fuel",
@@ -25,7 +33,6 @@ function formatCurrency(value) {
 export default function App() {
   const [activeTab, setActiveTab] = useState("entry");
   const [monthlySalary, setMonthlySalary] = useState(0);
-  const [transactions, setTransactions] = useState([]);
   const [formData, setFormData] = useState({
     date: "",
     category: "Fuel",
@@ -33,30 +40,26 @@ export default function App() {
     description: "",
   });
 
-  const totalExpenses = useMemo(() => {
-    const expenseCategories = new Set([
-      "Fuel",
-      "Bills",
-      "Loan",
-      "Koko",
-      "Personal",
-    ]);
+  const { transactions, loading, error } = useTransactions();
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.toLocaleString("en-US", { month: "long" });
+  const currentSummary = useMemo(
+    () =>
+      calculateMonthlySummary(
+        transactions,
+        currentYear,
+        currentMonth,
+        20000,
+        monthlySalary,
+      ),
+    [transactions, currentYear, currentMonth, monthlySalary],
+  );
 
-    return transactions.reduce((sum, transaction) => {
-      if (!expenseCategories.has(transaction.category)) {
-        return sum;
-      }
-
-      return sum + transaction.amount;
-    }, 0);
-  }, [transactions]);
-
-  const netSavings = monthlySalary - totalExpenses;
-  const remainingBudget = personalBudgetLimit - totalExpenses;
-  const month = new Date().toLocaleString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const totalExpenses = currentSummary.totalExpenses;
+  const netSavings = currentSummary.netSavings;
+  const remainingBudget = currentSummary.remainingBudget;
+  const month = formatCurrentMonthLabel();
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -69,29 +72,50 @@ export default function App() {
   function handleSubmit(event) {
     event.preventDefault();
 
-    if (!formData.date || !formData.amount) {
+    if (!db || !formData.date || !formData.amount) {
       return;
     }
 
-    setTransactions((current) => [
-      {
-        id: crypto.randomUUID(),
-        date: formData.date,
-        category: formData.category,
-        amount: Number(formData.amount),
-        description: formData.description.trim(),
-      },
-      ...current,
-    ]);
+    const selectedDate = new Date(formData.date);
+    if (Number.isNaN(selectedDate.getTime())) {
+      return;
+    }
 
-    setFormData({
-      date: "",
-      category: "Fuel",
-      amount: "",
-      description: "",
-    });
+    const year = selectedDate.getFullYear();
+    const monthName = selectedDate.toLocaleString("en-US", { month: "long" });
+    const dayOfWeek = selectedDate.toLocaleString("en-US", { weekday: "long" });
+    const transactionType = getTransactionType(formData.category);
+    const amount = Number(formData.amount);
 
-    setActiveTab("dashboard");
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return;
+    }
+
+    addDoc(collection(db, "transactions"), {
+      date: formData.date,
+      year,
+      month: monthName,
+      monthIndex: selectedDate.getMonth(),
+      dayOfWeek,
+      category: formData.category,
+      transactionType,
+      amount,
+      description: formData.description.trim(),
+      createdAt: serverTimestamp(),
+    })
+      .then(() => {
+        setFormData({
+          date: "",
+          category: "Fuel",
+          amount: "",
+          description: "",
+        });
+
+        setActiveTab("dashboard");
+      })
+      .catch((submitError) => {
+        console.error("Failed to save transaction:", submitError);
+      });
   }
 
   return (
@@ -158,6 +182,9 @@ export default function App() {
                 netSavings={netSavings}
                 remainingBudget={remainingBudget}
                 formatCurrency={formatCurrency}
+                transactions={transactions}
+                loading={loading}
+                error={error}
               />
             )}
           </div>
