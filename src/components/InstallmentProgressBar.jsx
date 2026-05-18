@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import useInstallments from "../hooks/useInstallments";
+
 /**
  * InstallmentProgressBar
  * Visual tracker for active financial goals and installments
@@ -9,6 +13,13 @@ export default function InstallmentProgressBar({
   onEdit = null,
   onPause = null,
 }) {
+  const { user } = useAuth();
+  const { payInstallment } = useInstallments(user);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDateConfirm, setShowDateConfirm] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
   const {
     name = "Goal",
     icon = "🎯",
@@ -98,12 +109,101 @@ export default function InstallmentProgressBar({
             </p>
           </div>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${config.badge}`}
-        >
-          {config.icon} {config.message}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${config.badge}`}
+          >
+            {config.icon} {config.message}
+          </span>
+
+          {/* Mark as Paid / Paid badge */}
+          {installment.isPaidThisMonth ? (
+            <span className="shrink-0 bg-emerald-100 text-emerald-700 font-medium px-3 py-1.5 rounded-xl text-xs flex items-center gap-1">
+              Paid ✓
+            </span>
+          ) : (
+            <button
+              onClick={() => setShowDateConfirm(true)}
+              disabled={isSubmitting}
+              className="shrink-0 bg-slate-900 text-white hover:bg-slate-800 font-medium px-3 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1 disabled:opacity-60"
+            >
+              {isSubmitting ? "Processing..." : "Mark as Paid"}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Date confirmation overlay/modal */}
+      {showDateConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">
+                  Confirm Installment Payment
+                </h4>
+                <p className="mt-1 text-xs text-slate-500">
+                  Choose the payment date for this installment.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDateConfirm(false)}
+                className="ml-3 rounded-md bg-slate-100 px-2 py-1 text-sm text-slate-700"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label className="grid gap-2">
+                <span className="text-xs font-medium text-slate-600">
+                  Payment date
+                </span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-4 focus:ring-slate-100"
+                />
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDateConfirm(false)}
+                className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (isSubmitting || !payInstallment) return;
+                  try {
+                    setIsSubmitting(true);
+                    const dateObj = new Date(`${selectedDate}T00:00:00`);
+                    const ok = await payInstallment(installment, dateObj);
+                    if (ok) setShowDateConfirm(false);
+                  } catch (err) {
+                    console.error("Confirm payment failed:", err);
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+                className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+              >
+                {isSubmitting ? "Processing..." : "Confirm Payment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress Bar - Thin Minimalist */}
       <div className="mb-5">

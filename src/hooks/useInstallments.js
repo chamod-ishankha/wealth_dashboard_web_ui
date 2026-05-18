@@ -8,7 +8,10 @@ import {
   updateDoc,
   doc,
   serverTimestamp,
+  getDocs,
+  Timestamp,
 } from "firebase/firestore";
+import { writeBatch, increment } from "firebase/firestore";
 import { db } from "../firebase";
 
 /**
@@ -69,6 +72,125 @@ export default function useInstallments(user) {
       setLoading(false);
     }
   }, [user?.uid]);
+
+  /**
+   * Compute which active installments are already paid for the current salary cycle.
+   * Adds `isPaidThisMonth` boolean to each installment object and updates state.
+   */
+  useEffect(() => {
+    if (!user?.uid || !db || !installments?.length) return undefined;
+
+    let mounted = true;
+
+    async function computePaidFlags(list) {
+      try {
+        // Determine user's salaryDate (day of month). Fallback to 1.
+        const salaryDate =
+          Number(user?.salaryDate ?? user?.settings?.salaryDate ?? 1) || 1;
+
+        const now = new Date();
+
+        // Build cycle start - if this month's salaryDate is after now, use previous month
+        function buildStartForMonth(year, month, day) {
+          const lastDay = new Date(year, month + 1, 0).getDate();
+          const d = Math.min(day, lastDay);
+          return new Date(year, month, d, 0, 0, 0, 0);
+        }
+
+        let start = buildStartForMonth(
+          now.getFullYear(),
+          now.getMonth(),
+          salaryDate,
+        );
+        if (start > now) {
+          // take previous month
+          const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          start = buildStartForMonth(
+            prev.getFullYear(),
+            prev.getMonth(),
+            salaryDate,
+          );
+        }
+
+        // next cycle start (exclusive end)
+        const nextStart = new Date(
+          start.getFullYear(),
+          start.getMonth() + 1,
+          start.getDate(),
+          0,
+          0,
+          0,
+          0,
+        );
+
+        const startTs = Timestamp.fromDate(start);
+        const nextStartTs = Timestamp.fromDate(nextStart);
+
+        // Work only with active installments
+        const active = list.filter((i) => i.status === "active");
+        if (!active.length) return;
+
+        // Collect categories and installment ids to match against
+        const categories = Array.from(
+          new Set(active.map((i) => i.category).filter(Boolean)),
+        );
+        const installmentIds = new Set(active.map((i) => i.id));
+
+        // Fetch transactions in this cycle (no category filter in query - will filter in JS)
+        // This avoids needing a composite index
+        const q = query(
+          collection(db, "transactions"),
+          where("userId", "==", user.uid),
+          where("transactionType", "==", "expense"),
+          where("date", ">=", startTs),
+          where("date", "<", nextStartTs),
+        );
+        const snap = await getDocs(q);
+        const txDocs = [];
+        snap.forEach((d) => {
+          const data = { id: d.id, ...d.data() };
+          txDocs.push(data);
+        });
+
+        // Deduplicate by doc id (not needed since we only fetch once, but keep for safety)
+        const seen = new Set();
+        const txs = txDocs.filter((t) => {
+          if (seen.has(t.id)) return false;
+          seen.add(t.id);
+          return true;
+        });
+
+        // Build lookup by category (filtered to active installment categories) and by installmentId
+        const paidByCategory = new Set(
+          txs
+            .filter((t) => categories.includes(t.category))
+            .map((t) => t.category),
+        );
+        const paidByInstallmentId = new Set(
+          txs.map((t) => t.installmentId).filter(Boolean),
+        );
+
+        // Map over original list and add flag
+        const updated = list.map((it) => ({
+          ...it,
+          isPaidThisMonth:
+            Boolean(it.category && paidByCategory.has(it.category)) ||
+            Boolean(it.id && paidByInstallmentId.has(it.id)),
+        }));
+
+        if (mounted) setInstallments(updated);
+      } catch (err) {
+        console.error("Error computing paid flags:", err);
+        // don't change installments on error
+      }
+    }
+
+    computePaidFlags(installments);
+
+    return () => {
+      mounted = false;
+    };
+  }, [installments, user?.uid]);
 
   /**
    * Create a new installment/goal
@@ -219,6 +341,58 @@ export default function useInstallments(user) {
   }
 
   /**
+   * Quick pay an installment by adding an expense transaction linked to the installment
+   */
+  async function payInstallment(installment, paymentDate = null) {
+    if (!user?.uid || !db || !installment) return false;
+
+    try {
+      const amount = Number(
+        installment.monthlyAmount || installment.monthlyContribution || 0,
+      );
+
+      const dateObj =
+        paymentDate && paymentDate instanceof Date ? paymentDate : new Date();
+      const ts = Timestamp.fromDate(dateObj);
+      const year = dateObj.getFullYear();
+      const monthIndex = dateObj.getMonth();
+
+      // Use a batch to atomically create the transaction and increment the installment's saved/currentAmount
+      const batch = writeBatch(db);
+
+      // New transaction doc ref with auto id
+      const txRef = doc(collection(db, "transactions"));
+      batch.set(txRef, {
+        userId: user.uid,
+        amount,
+        category: installment.category || "Other",
+        transactionType: "expense",
+        description: `Paid installment for ${installment.name || installment.title || "installment"}`,
+        date: ts,
+        year,
+        monthIndex,
+        installmentId: installment.id,
+        createdAt: serverTimestamp(),
+      });
+
+      // Update installment document (activeInstallments collection) by incrementing currentAmount
+      const instRef = doc(db, "activeInstallments", installment.id);
+      batch.update(instRef, {
+        currentAmount: increment(amount),
+        updatedAt: serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      return true;
+    } catch (err) {
+      console.error("Error paying installment:", err);
+      setError(err.message);
+      return false;
+    }
+  }
+
+  /**
    * Get active installments only
    */
   const activeInstallments = installments.filter((i) => i.status === "active");
@@ -267,6 +441,7 @@ export default function useInstallments(user) {
     updateInstallmentProgress,
     toggleInstallmentStatus,
     deleteInstallment,
+    payInstallment,
     totalMonthlyCommitment,
     totalAmountPaid,
     totalTargetAmount,
