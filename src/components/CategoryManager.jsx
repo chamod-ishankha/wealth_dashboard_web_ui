@@ -71,7 +71,7 @@ export default function CategoryManager() {
       )}
 
       <form className="mt-6 space-y-3" onSubmit={handleAddCategory}>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             type="text"
             value={newCategory}
@@ -82,7 +82,7 @@ export default function CategoryManager() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70"
+            className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-70 sm:w-auto"
           >
             Add
           </button>

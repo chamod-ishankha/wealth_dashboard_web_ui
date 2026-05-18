@@ -12,7 +12,6 @@ import {
 import DashboardSummary from "./components/DashboardSummary";
 import StatCard from "./components/StatCard";
 import TransactionsEntryForm from "./components/TransactionsEntryForm";
-import Navbar from "./components/Navbar";
 import { useAuth } from "./context/AuthContext";
 import useMonthlySalaries from "./hooks/useMonthlySalaries";
 import useTransactions from "./hooks/useTransactions";
@@ -386,7 +385,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
       <main className="min-h-screen bg-minimal-grid bg-[length:24px_24px]">
         <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-8 sm:px-6 lg:px-8">
           {/* HEADER: Title + Add Transaction Button */}
@@ -456,62 +454,53 @@ export default function App() {
 
         {/* FORM MODAL: Backdrop + Animation */}
         {isFormOpen ? (
-          <div className="fixed inset-0 z-50 flex items-end overflow-y-auto px-4 py-4 sm:items-center sm:py-0 sm:px-0 md:p-0">
-            {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-4"
+            onClick={() => setIsFormOpen(false)}
+          >
             <div
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
-              onClick={() => setIsFormOpen(false)}
-            />
-
-            {/* Modal Container with Animations */}
-            {/* Mobile: Slide-up from bottom */}
-            {/* Desktop: Fade-in to center */}
-            <div className="relative w-full transform sm:mx-auto sm:w-full sm:max-w-2xl">
-              {/* Mobile slide-up animation */}
-              <div className="relative max-h-[calc(100vh-2rem)] overflow-y-auto rounded-t-2xl bg-white p-6 shadow-2xl transition animate-in slide-in-from-bottom-1/2 duration-300 sm:max-h-none sm:overflow-visible sm:rounded-2xl sm:p-8 sm:zoom-in-95 sm:fade-in-0 md:zoom-in-95 md:fade-in-0 sm:duration-200">
-                <button
-                  type="button"
-                  onClick={() => setIsFormOpen(false)}
-                  aria-label="Close add transaction modal"
-                  className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full text-slate-400 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-4 focus:ring-slate-200"
+              className="relative bg-white w-full sm:max-w-xl md:max-w-2xl mx-auto rounded-2xl p-6 sm:p-8 shadow-xl my-auto max-h-[85vh] overflow-y-auto sm:max-h-[90vh] flex flex-col"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setIsFormOpen(false)}
+                aria-label="Close add transaction modal"
+                className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full text-slate-400 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-4 focus:ring-slate-200"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                  aria-hidden="true"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-5 w-5"
-                    aria-hidden="true"
-                  >
-                    <path d="M18 6 6 18" />
-                    <path d="M6 6l12 12" />
-                  </svg>
-                </button>
+                  <path d="M18 6 6 18" />
+                  <path d="M6 6l12 12" />
+                </svg>
+              </button>
 
-                {/* Header */}
-                <div className="mb-6 flex flex-col items-start justify-between gap-3 pr-12 sm:flex-row sm:items-center sm:pr-0">
-                  <div>
-                    <h2 className="text-2xl font-semibold text-slate-900">
-                      New Transaction
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Add income, expenses, or payment plans
-                    </p>
-                  </div>
-                </div>
-
-                {/* Form */}
-                <TransactionsEntryForm
-                  categories={categories}
-                  formData={formData}
-                  onChange={handleChange}
-                  onSubmit={handleSubmit}
-                  onInstallmentSubmit={handleInstallmentSubmit}
-                  installmentSubmitting={installmentSubmitting}
-                />
+              <div className="mb-6 pr-12">
+                <h2 className="text-2xl font-semibold text-slate-900">
+                  New Transaction
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Add income, expenses, or payment plans
+                </p>
               </div>
+
+              <TransactionsEntryForm
+                categories={categories}
+                formData={formData}
+                onChange={handleChange}
+                onSubmit={handleSubmit}
+                onInstallmentSubmit={handleInstallmentSubmit}
+                onClose={() => setIsFormOpen(false)}
+                installmentSubmitting={installmentSubmitting}
+              />
             </div>
           </div>
         ) : null}

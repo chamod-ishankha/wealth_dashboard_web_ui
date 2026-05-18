@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import CategoryManager from "./CategoryManager";
 import useUserSettings from "../hooks/useUserSettings";
@@ -6,12 +7,22 @@ import useUserSettings from "../hooks/useUserSettings";
 const SALARY_DATE_OPTIONS = Array.from({ length: 31 }, (_, index) => index + 1);
 
 export default function Profile() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { salaryDate, loading, error, saveUserSettings } =
     useUserSettings(user);
   const [selectedSalaryDate, setSelectedSalaryDate] = useState("30");
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+
+  const identity = useMemo(
+    () => user?.displayName?.trim() || user?.email?.trim() || "User",
+    [user?.displayName, user?.email],
+  );
+
+  const fullName = user?.displayName?.trim() || "No name set";
+  const email = user?.email?.trim() || "No email available";
+  const avatarLabel = identity.charAt(0).toUpperCase();
 
   useEffect(() => {
     setSelectedSalaryDate(String(salaryDate || 30));
@@ -34,121 +45,155 @@ export default function Profile() {
     setSaving(false);
   }
 
+  async function handleLogout() {
+    try {
+      await logout();
+      navigate("/login");
+    } catch (logoutError) {
+      console.error("Logout error:", logoutError);
+    }
+  }
+
   return (
-    <div className="mx-auto min-h-screen max-w-3xl space-y-6 px-4 py-10">
-      <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
-        <div className="mb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
-            Profile
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-            Account details
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            View your current session information.
-          </p>
-        </div>
+    <div className="min-h-screen w-full bg-[#f8fafc] pt-8 pb-12 px-4 relative overflow-y-auto bg-minimal-grid bg-[length:24px_24px]">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute right-[-4rem] top-20 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-slate-500/10 blur-3xl" />
+      </div>
 
-        <div className="space-y-4 rounded-2xl bg-slate-50 p-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Name
-            </p>
-            <p className="mt-1 text-base font-medium text-slate-900">
-              {user?.displayName || "No name set"}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Email
-            </p>
-            <p className="mt-1 text-base font-medium text-slate-900">
-              {user?.email || "No email available"}
-            </p>
-          </div>
-        </div>
-
-        <form
-          onSubmit={handleSaveSalaryDate}
-          className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5"
-        >
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Salary Payout Date
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Select the day of the month your salary is paid. This helps the
-              dashboard calculate monthly budgets more accurately.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-2">
-              <span className="text-sm font-medium text-slate-700">
-                Payout Day
-              </span>
-              <select
-                value={selectedSalaryDate}
-                onChange={(event) => setSelectedSalaryDate(event.target.value)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-              >
-                {SALARY_DATE_OPTIONS.map((day) => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="grid gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3">
-              <span className="text-sm font-medium text-slate-700">
-                Current Setting
-              </span>
-              <span className="text-sm text-slate-500">
-                Day {selectedSalaryDate} of every month
-              </span>
-            </div>
-          </div>
-
-          {error ? (
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              {error}
-            </div>
-          ) : null}
-
-          {saveMessage ? (
-            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {saveMessage}
-            </div>
-          ) : null}
-
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <p className="text-xs text-slate-500">
-              {loading
-                ? "Loading saved payout date..."
-                : "Used by dashboard components in real time."}
-            </p>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? "Saving..." : "Save Salary Payout Date"}
-            </button>
-          </div>
-        </form>
-
+      <div className="max-w-6xl mx-auto w-full mb-6">
         <button
           type="button"
-          onClick={logout}
-          className="mt-6 w-full rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+          onClick={() => navigate("/")}
+          className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium text-sm mb-6 transition-colors hover:-translate-x-1 transition-transform"
         >
-          Logout
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+          <span>Back to Dashboard</span>
         </button>
       </div>
 
-      <CategoryManager />
+      <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm flex flex-col items-center text-center">
+          <div className="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 border-2 border-slate-100 shadow-sm mb-4">
+            {user?.photoURL ? (
+              <img
+                className="w-full h-full object-cover"
+                src={user.photoURL}
+                alt={identity}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-900 text-white text-3xl font-bold">
+                {avatarLabel}
+              </div>
+            )}
+          </div>
+
+          <h1 className="text-2xl font-semibold text-slate-900">{fullName}</h1>
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="truncate">{email}</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-6 w-full rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            Logout
+          </button>
+        </div>
+
+        <div className="lg:col-span-2 flex flex-col gap-8 w-full">
+          <form
+            onSubmit={handleSaveSalaryDate}
+            className="w-full bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm"
+          >
+            <div className="mb-5">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Financial Settings
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Configure your salary cycle and dashboard timing preferences.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-slate-700">
+                  Salary Payout Date
+                </span>
+                <select
+                  value={selectedSalaryDate}
+                  onChange={(event) =>
+                    setSelectedSalaryDate(event.target.value)
+                  }
+                  className="rounded-xl border border-slate-200 p-3 w-full bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-slate-900"
+                >
+                  {SALARY_DATE_OPTIONS.map((day) => (
+                    <option key={day} value={day}>
+                      Day {day}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <span className="text-sm font-medium text-slate-700">
+                  Current Setting
+                </span>
+                <span className="text-sm text-slate-500">
+                  Day {selectedSalaryDate} of every month
+                </span>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                Loading saved payout date...
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {error}
+              </div>
+            ) : null}
+
+            {saveMessage ? (
+              <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {saveMessage}
+              </div>
+            ) : null}
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-slate-500">
+                Used by dashboard calculations in real time.
+              </p>
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save Salary Payout Date"}
+              </button>
+            </div>
+          </form>
+
+          <CategoryManager />
+        </div>
+      </div>
     </div>
   );
 }

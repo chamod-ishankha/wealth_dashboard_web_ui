@@ -7,6 +7,7 @@ export default function TransactionsEntryForm({
   onChange,
   onSubmit,
   onInstallmentSubmit,
+  onClose,
   installmentSubmitting = false,
 }) {
   const [entryTab, setEntryTab] = useState("transaction");
@@ -122,7 +123,8 @@ export default function TransactionsEntryForm({
         <InstallmentSetupForm
           loading={installmentSubmitting}
           onSubmit={onInstallmentSubmit}
-          onCancel={() => setEntryTab("transaction")}
+          onCancel={onClose}
+          embedded
         />
       )}
     </section>

@@ -26,6 +26,7 @@ export default function InstallmentSetupForm({
   loading = false,
   onSubmit,
   onCancel,
+  embedded = false,
 }) {
   const seededValues = useMemo(
     () => ({
@@ -92,9 +93,13 @@ export default function InstallmentSetupForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"
+      className={
+        embedded
+          ? "space-y-5"
+          : "rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"
+      }
     >
-      <div className="mb-4">
+      <div className={embedded ? "" : "mb-4"}>
         <h3 className="text-lg font-semibold text-slate-900">
           Installment Setup
         </h3>
@@ -104,7 +109,13 @@ export default function InstallmentSetupForm({
       </div>
 
       {error ? (
-        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <div
+          className={
+            embedded
+              ? "rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+              : "mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+          }
+        >
           {error}
         </div>
       ) : null}
