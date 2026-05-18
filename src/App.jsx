@@ -18,6 +18,7 @@ import useMonthlySalaries from "./hooks/useMonthlySalaries";
 import useTransactions from "./hooks/useTransactions";
 import useCategories from "./hooks/useCategories";
 import useInstallments from "./hooks/useInstallments";
+import useUserSettings from "./hooks/useUserSettings";
 import {
   calculateMonthlySummary,
   getAvailableMonthsForYear,
@@ -68,7 +69,7 @@ function formatTimestamp(timestamp) {
 
 export default function App() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("entry");
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [salaryByPeriod, setSalaryByPeriod] = useState({});
@@ -93,6 +94,7 @@ export default function App() {
   } = useMonthlySalaries(user, activePeriodKey);
   const { addInstallment } = useInstallments(user);
   const [installmentSubmitting, setInstallmentSubmitting] = useState(false);
+  const { salaryDate } = useUserSettings(user);
 
   // Fetch user categories
   const { categories, loading: categoriesLoading } = useCategories(user);
@@ -257,8 +259,7 @@ export default function App() {
           amount: "",
           description: "",
         });
-
-        setActiveTab("dashboard");
+        setIsFormOpen(false);
       })
       .catch((submitError) => {
         console.error("Failed to save transaction:", submitError);
@@ -292,7 +293,7 @@ export default function App() {
       setInstallmentSubmitting(true);
       const ok = await addInstallment(installmentPayload);
       if (ok) {
-        setActiveTab("dashboard");
+        setIsFormOpen(false);
       }
     } catch (submitError) {
       console.error("Failed to save installment:", submitError);
@@ -387,53 +388,107 @@ export default function App() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <main className="min-h-screen bg-minimal-grid bg-[length:24px_24px]">
-        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-8 sm:px-6 lg:px-8">
-          <header className="mb-8 rounded-3xl border border-white/60 bg-white/70 p-6 shadow-soft backdrop-blur">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Personal Finance Tracker
-                </p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                  Minimal money management UI
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                  Track transactions, review monthly summary metrics, and
-                  monitor your personal budget limit in a sleek React + Tailwind
-                  layout.
-                </p>
-              </div>
-
-              <div className="flex rounded-2xl bg-slate-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("entry")}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                    activeTab === "entry"
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  Transactions Entry Form
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("dashboard")}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                    activeTab === "dashboard"
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  Dashboard Summary
-                </button>
-              </div>
+        <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-8 sm:px-6 lg:px-8">
+          {/* HEADER: Title + Add Transaction Button */}
+          <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+                Personal Finance Tracker
+              </p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                Wealth Dashboard
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                Monitor your budget, track expenses, and achieve your financial
+                goals
+              </p>
             </div>
+
+            {/* Desktop: Add Transaction Button */}
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(true)}
+              className="hidden sm:inline-flex shrink-0 items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 active:bg-slate-950"
+            >
+              <span>+</span>
+              <span>Add Transaction</span>
+            </button>
           </header>
 
-          <div className="grid gap-6 xl:grid-cols-5">
-            <div className="xl:col-span-3">
-              {activeTab === "entry" ? (
+          {/* DASHBOARD CONTENT */}
+          <div className="w-full">
+            <DashboardSummary
+              month={month}
+              budgetLimit={personalBudgetLimit}
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+              availableYears={availableYears}
+              monthsForSelectedYear={monthsForSelectedYear}
+              monthlySalary={monthlySalary}
+              onMonthlySalaryChange={handleMonthlySalaryChange}
+              totalExpenses={totalExpenses}
+              netSavings={netSavings}
+              remainingBudget={remainingBudget}
+              salaryDate={salaryDate}
+              formatCurrency={formatCurrency}
+              transactions={transactions}
+              groupedTransactions={groupedTransactions}
+              salaryByPeriod={salaryByPeriod}
+              loading={loading || salaryLoading}
+              error={error || salaryError}
+              onYearChange={setSelectedYear}
+              onMonthChange={setSelectedMonth}
+              onDeleteTransaction={handleDeleteTransaction}
+              onEditTransaction={handleOpenEditTransaction}
+            />
+          </div>
+        </div>
+
+        {/* MOBILE: Floating Action Button (FAB) */}
+        <button
+          type="button"
+          onClick={() => setIsFormOpen(true)}
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-2xl text-white shadow-lg transition hover:bg-slate-800 active:bg-slate-950 sm:hidden"
+          title="Add transaction"
+        >
+          +
+        </button>
+
+        {/* FORM MODAL: Backdrop + Animation */}
+        {isFormOpen ? (
+          <div className="fixed inset-0 z-50 flex items-end px-4 pb-4 sm:items-center sm:pb-0 md:p-0">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+              onClick={() => setIsFormOpen(false)}
+            />
+
+            {/* Modal Container with Animations */}
+            {/* Mobile: Slide-up from bottom */}
+            {/* Desktop: Fade-in to center */}
+            <div className="relative w-full transform sm:mx-auto sm:w-full sm:max-w-2xl">
+              {/* Mobile slide-up animation */}
+              <div className="sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-2xl transition sm:p-8 animate-in sm:zoom-in-95 sm:fade-in-0 md:zoom-in-95 md:fade-in-0 slide-in-from-bottom-1/2 duration-300 sm:duration-200">
+                {/* Header */}
+                <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-slate-900">
+                      New Transaction
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Add income, expenses, or payment plans
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsFormOpen(false)}
+                    className="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 sm:hidden"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {/* Form */}
                 <TransactionsEntryForm
                   categories={categories}
                   formData={formData}
@@ -442,96 +497,28 @@ export default function App() {
                   onInstallmentSubmit={handleInstallmentSubmit}
                   installmentSubmitting={installmentSubmitting}
                 />
-              ) : (
-                <DashboardSummary
-                  month={month}
-                  budgetLimit={personalBudgetLimit}
-                  selectedYear={selectedYear}
-                  selectedMonth={selectedMonth}
-                  availableYears={availableYears}
-                  monthsForSelectedYear={monthsForSelectedYear}
-                  monthlySalary={monthlySalary}
-                  onMonthlySalaryChange={handleMonthlySalaryChange}
-                  totalExpenses={totalExpenses}
-                  netSavings={netSavings}
-                  remainingBudget={remainingBudget}
-                  formatCurrency={formatCurrency}
-                  transactions={transactions}
-                  groupedTransactions={groupedTransactions}
-                  salaryByPeriod={salaryByPeriod}
-                  loading={loading || salaryLoading}
-                  error={error || salaryError}
-                  onYearChange={setSelectedYear}
-                  onMonthChange={setSelectedMonth}
-                  onDeleteTransaction={handleDeleteTransaction}
-                  onEditTransaction={handleOpenEditTransaction}
-                />
-              )}
-            </div>
-
-            <aside className="xl:col-span-2">
-              <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-soft backdrop-blur">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Quick Snapshot
-                </h3>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                  <StatCard
-                    label="Entries"
-                    value={transactions.length}
-                    accent="slate"
-                  />
-                  <StatCard
-                    label="Current Budget Remaining"
-                    value={formatCurrency(remainingBudget)}
-                    accent="blue"
-                  />
-                </div>
-
-                <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-medium text-slate-500">
-                    Latest entry
-                  </p>
-                  {transactions.length > 0 ? (
-                    <div className="mt-3 space-y-1">
-                      <p className="font-semibold text-slate-900">
-                        {transactions[0].category}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {transactions[0].description || "No description added"}
-                      </p>
-                      <p className="text-sm font-medium text-slate-700">
-                        {formatTimestamp(transactions[0].date)} •{" "}
-                        {formatCurrency(transactions[0].amount)}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="mt-3 text-sm text-slate-500">
-                      No transactions logged yet.
-                    </p>
-                  )}
-                </div>
               </div>
-            </aside>
+            </div>
           </div>
-        </div>
+        ) : null}
 
+        {/* EDIT TRANSACTION MODAL */}
         {editingTransaction ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
-              <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="mb-5 flex items-center justify-between gap-3 sticky top-0 bg-white pb-4 border-b border-slate-200">
                 <div>
-                  <h3 className="text-xl font-semibold text-slate-900">
+                  <h3 className="text-lg font-semibold text-slate-900">
                     Edit Transaction
                   </h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Update the selected transaction and save changes to
-                    Firestore.
+                  <p className="mt-1 text-xs text-slate-500">
+                    Update transaction details and save changes
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEditingTransaction(null)}
-                  className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
                 >
                   Close
                 </button>
@@ -542,7 +529,7 @@ export default function App() {
                 onSubmit={handleSaveEdit}
               >
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     Date
                   </span>
                   <input
@@ -550,19 +537,19 @@ export default function App() {
                     name="date"
                     value={editingTransaction.date}
                     onChange={handleEditChange}
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                   />
                 </label>
 
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     Category
                   </span>
                   <select
                     name="category"
                     value={editingTransaction.category}
                     onChange={handleEditChange}
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                   >
                     {categories.map((category) => (
                       <option key={category} value={category}>
@@ -573,7 +560,7 @@ export default function App() {
                 </label>
 
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     Amount
                   </span>
                   <input
@@ -583,12 +570,12 @@ export default function App() {
                     step="0.01"
                     value={editingTransaction.amount}
                     onChange={handleEditChange}
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                   />
                 </label>
 
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     Description
                   </span>
                   <input
@@ -596,21 +583,21 @@ export default function App() {
                     name="description"
                     value={editingTransaction.description}
                     onChange={handleEditChange}
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                   />
                 </label>
 
-                <div className="md:col-span-2 flex justify-end gap-3">
+                <div className="md:col-span-2 flex justify-end gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setEditingTransaction(null)}
-                    className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
                   >
                     Save Changes
                   </button>

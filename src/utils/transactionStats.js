@@ -323,6 +323,55 @@ export function getMonthDaysCount(year, monthIndex) {
 }
 
 /**
+ * Calculate remaining days until the next salary payout date.
+ * If the configured payout day is greater than the days in the month,
+ * it is clamped to the last day of that month.
+ *
+ * @param {number} salaryDate - Day of month salary is paid (1-31)
+ * @param {Date} referenceDate - Date to calculate from
+ * @returns {number} Days remaining including today
+ */
+export function getRemainingDaysUntilSalaryDate(
+  salaryDate,
+  referenceDate = new Date(),
+) {
+  const payoutDay = Math.min(Math.max(1, Number(salaryDate || 30)), 31);
+
+  const today = new Date(referenceDate);
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const currentMonthDays = getMonthDaysCount(year, month);
+  const currentMonthPayoutDay = Math.min(payoutDay, currentMonthDays);
+
+  const startOfToday = new Date(year, month, today.getDate());
+  const targetThisMonth = new Date(year, month, currentMonthPayoutDay);
+
+  let targetDate = targetThisMonth;
+  if (today.getDate() > currentMonthPayoutDay) {
+    const nextMonth = month + 1;
+    const nextMonthDays = getMonthDaysCount(
+      year + Math.floor(nextMonth / 12),
+      nextMonth % 12,
+    );
+    const nextMonthPayoutDay = Math.min(payoutDay, nextMonthDays);
+    targetDate = new Date(year, month + 1, nextMonthPayoutDay);
+  }
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const diff = Math.ceil(
+    (new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+    ) -
+      startOfToday) /
+      msPerDay,
+  );
+
+  return Math.max(1, diff + 1);
+}
+
+/**
  * Calculate remaining days in month from a given date
  * @param {number} year - e.g., 2026
  * @param {number} monthIndex - 0-11
@@ -361,9 +410,12 @@ export function calculateSafeToSpend(
   personalExpensesSpent,
   year,
   monthIndex,
+  salaryDate = null,
 ) {
   const remainingBudget = budgetLimit - personalExpensesSpent;
-  const remainingDays = getRemainingDaysInMonth(year, monthIndex);
+  const remainingDays = Number.isFinite(Number(salaryDate))
+    ? getRemainingDaysUntilSalaryDate(Number(salaryDate))
+    : getRemainingDaysInMonth(year, monthIndex);
 
   if (remainingDays <= 0) {
     return {

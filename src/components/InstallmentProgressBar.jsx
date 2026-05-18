@@ -86,11 +86,11 @@ export default function InstallmentProgressBar({
   const config = statusConfig[status] || statusConfig.active;
 
   return (
-    <div className="group flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-soft transition-all duration-300 hover:shadow-md sm:p-5">
+    <div className="group flex h-full flex-col rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md">
       {/* Header with Name and Status */}
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="text-3xl">{icon}</span>
+          <span className="text-2xl">{icon}</span>
           <div className="min-w-0">
             <h4 className="truncate font-semibold text-slate-900">{name}</h4>
             <p className="truncate text-xs text-slate-500">
@@ -105,34 +105,33 @@ export default function InstallmentProgressBar({
         </span>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-4">
-        <div className="relative h-3 overflow-hidden rounded-full bg-slate-100">
+      {/* Progress Bar - Thin Minimalist */}
+      <div className="mb-5">
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full transition-all duration-500"
             style={{
               width: `${progressPercent}%`,
               backgroundColor: color,
-              boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)",
             }}
           />
         </div>
-        <p className="mt-2 text-right text-sm font-semibold text-slate-700">
+        <p className="mt-2.5 text-right text-xs font-semibold text-slate-600">
           {progressPercent}% Complete
         </p>
       </div>
 
-      {/* Amount Grid */}
-      <div className="mb-4 grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-2">
+      {/* Amount Metrics Grid - Two Column */}
+      <div className="mb-5 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500">Paid</p>
-          <p className="mt-1 break-words text-sm font-semibold text-slate-900 sm:text-base">
+          <p className="mt-1.5 font-semibold text-slate-900">
             {money(currentAmount)}
           </p>
         </div>
         <div className="min-w-0">
           <p className="text-xs font-medium text-slate-500">Target</p>
-          <p className="mt-1 break-words text-sm font-semibold text-slate-900 sm:text-base">
+          <p className="mt-1.5 font-semibold text-slate-900">
             {money(principalAmount)}
           </p>
         </div>
@@ -140,68 +139,58 @@ export default function InstallmentProgressBar({
 
       {/* Remaining Amount Card */}
       {!isCompleted && (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-          <p className="text-xs font-medium text-blue-600">Amount Remaining</p>
-          <p className="mt-1 text-2xl font-bold text-blue-700">
+        <div className="mb-5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <p className="text-xs font-medium text-blue-600">Remaining</p>
+          <p className="mt-1.5 text-lg font-bold text-blue-700">
             {money(Math.max(0, principalAmount - Number(currentAmount || 0)))}
           </p>
         </div>
       )}
 
-      {/* Interest Cost Analytics */}
-      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-800">
-            Interest Cost Analytics
-          </p>
-          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500">
-            {installmentCount > 0 ? `${installmentCount} months` : "N/A"}
-          </span>
-        </div>
+      {/* Interest Cost Analytics - Streamlined Grid */}
+      <div className="mb-1 rounded-lg border border-slate-100 bg-slate-50 p-4">
+        <p className="mb-3 text-xs font-semibold text-slate-700">
+          Cost Breakdown
+        </p>
 
-        <div className="grid items-stretch gap-2 grid-cols-1">
-          <div className="flex h-full min-w-0 flex-col justify-between rounded-lg bg-white px-3 py-2">
-            <p className="min-h-8 text-xs leading-snug text-slate-500">
-              Principal Amount
-            </p>
-            <p className="mt-1 break-words text-sm font-semibold tabular-nums text-slate-900 sm:text-base">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-md bg-white px-3 py-2">
+            <p className="text-xs text-slate-500">Principal</p>
+            <p className="mt-1 text-sm font-bold text-slate-900">
               {money(principalAmount)}
             </p>
           </div>
-          <div className="flex h-full min-w-0 flex-col justify-between rounded-lg bg-white px-3 py-2">
-            <p className="min-h-8 text-xs leading-snug text-slate-500">
-              Lease Premium / Interest
-            </p>
-            <p className="mt-1 break-words text-sm font-semibold tabular-nums text-amber-700 sm:text-base">
+          <div className="rounded-md bg-white px-3 py-2">
+            <p className="text-xs text-slate-500">Interest</p>
+            <p className="mt-1 text-sm font-bold text-amber-700">
               {money(totalInterest)}
             </p>
           </div>
-          <div className="flex h-full min-w-0 flex-col justify-between rounded-lg bg-white px-3 py-2">
-            <p className="min-h-8 text-xs leading-snug text-slate-500">
-              Total Forecasted Cost
-            </p>
-            <p className="mt-1 break-words text-sm font-semibold tabular-nums text-slate-900 sm:text-base">
-              {money(totalPayable)}
-            </p>
-          </div>
+        </div>
+
+        <div className="mt-2 rounded-md bg-white px-3 py-2">
+          <p className="text-xs text-slate-500">Total Cost</p>
+          <p className="mt-1 text-base font-bold text-slate-900">
+            {money(totalPayable)}
+          </p>
         </div>
       </div>
 
       {/* Completion Message */}
       {isCompleted && (
-        <div className="mb-4 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3 text-center">
+        <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-center">
           <p className="text-sm font-semibold text-emerald-700">
             🎉 Goal Completed!
           </p>
           <p className="mt-1 text-xs text-emerald-600">
-            You've reached your target amount.
+            Congratulations on reaching your target.
           </p>
         </div>
       )}
 
       {/* Timeline Info */}
       {monthsRemaining !== null && !isCompleted && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-100 px-3 py-2">
+        <div className="mt-4 mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-100 px-3 py-2">
           <span className="text-sm font-medium text-slate-700">
             {monthsRemaining > 0
               ? `${monthsRemaining} month${monthsRemaining !== 1 ? "s" : ""} remaining`

@@ -1,34 +1,91 @@
 import React, { useMemo } from "react";
-import { calculateSafeToSpend } from "../utils/transactionStats";
+
+const DEFAULT_SALARY_DATE = 30;
+
+function getDaysRemainingUntilNextSalaryPayout(
+  salaryDate = DEFAULT_SALARY_DATE,
+  referenceDate = new Date(),
+) {
+  const today = new Date(referenceDate);
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const dayOfMonth = today.getDate();
+
+  const payoutDay = Math.min(
+    Math.max(1, Number(salaryDate || DEFAULT_SALARY_DATE)),
+    31,
+  );
+
+  const currentMonthLastDay = new Date(year, month + 1, 0).getDate();
+  const currentMonthPayoutDay = Math.min(payoutDay, currentMonthLastDay);
+
+  let nextPayoutDate;
+
+  if (dayOfMonth <= currentMonthPayoutDay) {
+    // Next payout is in the current month.
+    nextPayoutDate = new Date(year, month, currentMonthPayoutDay);
+  } else {
+    // Next payout is in the next calendar month.
+    const nextMonthDate = new Date(year, month + 1, 1);
+    const nextYear = nextMonthDate.getFullYear();
+    const nextMonth = nextMonthDate.getMonth();
+    const nextMonthLastDay = new Date(nextYear, nextMonth + 1, 0).getDate();
+    const nextMonthPayoutDay = Math.min(payoutDay, nextMonthLastDay);
+    nextPayoutDate = new Date(nextYear, nextMonth, nextMonthPayoutDay);
+  }
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const startOfToday = new Date(year, month, dayOfMonth);
+  const startOfPayout = new Date(
+    nextPayoutDate.getFullYear(),
+    nextPayoutDate.getMonth(),
+    nextPayoutDate.getDate(),
+  );
+
+  const rawDays = Math.ceil((startOfPayout - startOfToday) / msPerDay);
+  return Math.max(0, rawDays);
+}
 
 /**
  * SafeToSpendCalculator
- * Shows the maximum daily spending to stay within personal budget
+ * Shows the maximum daily spending to stay within the current payroll cycle.
  *
  * Props expected:
- * - budgetLimit: total personal budget for the month
+ * - budgetLimit: total personal budget for the current cycle
  * - personalExpensesSpent: amount already spent from personal budget
- * - year: numeric year
- * - monthIndex: 0-11 month index
+ * - salaryDate: day of month salary is paid (1-31)
  * - formatCurrency: function to format numbers as currency
  */
 export default function SafeToSpendCalculator({
   budgetLimit = 0,
   personalExpensesSpent = 0,
-  year = new Date().getFullYear(),
-  monthIndex = new Date().getMonth(),
+  salaryDate = DEFAULT_SALARY_DATE,
   formatCurrency = (val) => `$${Number(val).toLocaleString()}`,
 }) {
-  const safeToSpend = useMemo(
-    () =>
-      calculateSafeToSpend(
-        Number(budgetLimit || 0),
-        Number(personalExpensesSpent || 0),
-        Number(year || new Date().getFullYear()),
-        Number(monthIndex || new Date().getMonth()),
-      ),
-    [budgetLimit, personalExpensesSpent, year, monthIndex],
-  );
+  const safeToSpend = useMemo(() => {
+    const remainingBudget =
+      Number(budgetLimit || 0) - Number(personalExpensesSpent || 0);
+    const remainingDays = getDaysRemainingUntilNextSalaryPayout(salaryDate);
+    const denominator = Math.max(1, remainingDays);
+    const dailySafeSpend =
+      remainingBudget > 0 ? remainingBudget / denominator : 0;
+
+    let status = "on-track";
+    if (remainingBudget < 0) {
+      status = "budget-exceeded";
+    } else if (remainingBudget === 0) {
+      status = "budget-exhausted";
+    } else if (dailySafeSpend === 0 && remainingBudget > 0) {
+      status = "minimal-remaining";
+    }
+
+    return {
+      dailySafeSpend,
+      remainingBudget,
+      remainingDays,
+      status,
+    };
+  }, [budgetLimit, personalExpensesSpent, salaryDate]);
 
   // Determine status color and icon
   let statusColor = "emerald"; // green = on track
@@ -93,53 +150,44 @@ export default function SafeToSpendCalculator({
 
   return (
     <div
-      className={`rounded-2xl border ${colors.border} ${colors.bg} p-5 shadow-soft transition-all duration-300`}
+      className={`rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-300`}
     >
-      {/* Header with Status */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className={`text-lg font-semibold ${colors.text}`}>
-            Safe-to-Spend
-          </h3>
-          <span
-            className={`rounded-full ${colors.badge} px-2 py-0.5 text-xs font-semibold`}
-          >
-            {statusIcon} {statusMessage}
-          </span>
-        </div>
+      {/* Header with Status Badge */}
+      <div className="mb-5 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-900">
+          Daily Safe-to-Spend
+        </h3>
+        <span
+          className={`rounded-full ${colors.badge} px-3 py-1 text-xs font-semibold`}
+        >
+          {statusIcon} {statusMessage}
+        </span>
       </div>
 
-      {/* Main Safe-to-Spend Amount */}
-      <div className="mb-6">
-        <p className={`text-sm font-medium opacity-75 ${colors.text}`}>
-          Daily Budget Available
+      {/* Main Safe-to-Spend Amount - Massive Display */}
+      <div className="mb-5">
+        <p className="mb-3 text-xs font-medium text-slate-500">
+          Available per day
         </p>
-        <div className="mt-2 flex items-baseline gap-2">
-          <p className={`text-4xl font-bold ${colors.text}`}>
-            {formatCurrency(Math.max(0, safeToSpend.dailySafeSpend))}
-          </p>
-          <span className={`text-sm opacity-75 ${colors.text}`}>per day</span>
-        </div>
+        <p className={`text-3xl font-bold ${colors.text}`}>
+          {formatCurrency(Math.max(0, safeToSpend.dailySafeSpend))}
+        </p>
       </div>
 
-      {/* Calculation Breakdown */}
-      <div className="mb-5 grid grid-cols-3 gap-3 rounded-xl bg-white/50 p-3">
+      {/* Calculation Breakdown - Two Column Metrics */}
+      <div className="mb-5 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3">
         <div>
-          <p className="text-xs font-medium text-slate-500">Remaining</p>
-          <p className="mt-1 font-semibold text-slate-900">
+          <p className="text-xs font-medium text-slate-500">Remaining Budget</p>
+          <p className="mt-1.5 font-semibold text-slate-900">
             {formatCurrency(Math.max(0, safeToSpend.remainingBudget))}
           </p>
         </div>
         <div>
-          <p className="text-xs font-medium text-slate-500">Days Left</p>
-          <p className="mt-1 font-semibold text-slate-900">
-            {safeToSpend.remainingDays}
+          <p className="text-xs font-medium text-slate-500">
+            Days Until Salary
           </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-slate-500">Budget Limit</p>
-          <p className="mt-1 font-semibold text-slate-900">
-            {formatCurrency(budgetLimit)}
+          <p className="mt-1.5 font-semibold text-slate-900">
+            {safeToSpend.remainingDays} days
           </p>
         </div>
       </div>
@@ -154,7 +202,7 @@ export default function SafeToSpendCalculator({
               : "—"}
           </p>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/60">
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
           <div
             className={`h-full transition-all duration-500 ${colors.bar}`}
             style={{
@@ -179,8 +227,8 @@ export default function SafeToSpendCalculator({
       {/* Info Footer */}
       <div className="mt-3 border-t border-white/30 pt-3">
         <p className="text-xs text-slate-500">
-          💡 Tip: Divide your remaining budget by remaining days in the month to
-          stay on track.
+          💡 Tip: Divide your remaining budget by the days left until your next
+          salary payout to stay on track.
         </p>
       </div>
     </div>

@@ -12,6 +12,8 @@ const DEFAULT_VALUES = {
   description: "",
 };
 
+const EMPTY_INITIAL_VALUES = {};
+
 function toInputDate(value) {
   if (!value) return "";
   const date = value?.toDate ? value.toDate() : new Date(value);
@@ -20,7 +22,7 @@ function toInputDate(value) {
 }
 
 export default function InstallmentSetupForm({
-  initialValues = {},
+  initialValues = EMPTY_INITIAL_VALUES,
   loading = false,
   onSubmit,
   onCancel,

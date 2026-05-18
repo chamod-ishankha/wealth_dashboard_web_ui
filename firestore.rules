@@ -85,6 +85,25 @@ service cloud.firestore {
         && request.resource.data.totalMonths is number;
     }
 
+    // User settings: scoped to owner
+    match /userSettings/{userId} {
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.salaryDate is number
+        && request.resource.data.salaryDate >= 1
+        && request.resource.data.salaryDate <= 31;
+
+      allow read, delete: if isSignedIn() && request.auth.uid == userId;
+
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.salaryDate is number
+        && request.resource.data.salaryDate >= 1
+        && request.resource.data.salaryDate <= 31;
+    }
+
     // Users collection: only the user may read/update their own profile
     match /users/{userId} {
       allow create: if isSignedIn() && request.auth.uid == userId;
