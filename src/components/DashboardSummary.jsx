@@ -89,6 +89,12 @@ export default function DashboardSummary({
       ),
     [transactions, selectedYear, selectedMonth, budgetLimit, monthlySalary],
   );
+  const selectedPeriodTxCount =
+    selectedMonthSummary?.monthlyTransactions?.length ?? 0;
+  const selectedPeriodSummaryLabel =
+    selectedPeriodTxCount > 0
+      ? `${selectedPeriodLabel} • ${selectedPeriodTxCount} transaction${selectedPeriodTxCount === 1 ? "" : "s"}`
+      : `${selectedPeriodLabel} • No transactions`;
 
   const { user } = useAuth();
   const {
@@ -102,6 +108,10 @@ export default function DashboardSummary({
   const [editingInstallment, setEditingInstallment] = useState(null);
   const [savingInstallment, setSavingInstallment] = useState(false);
   const [pageInput, setPageInput] = useState(String(transactionsPage));
+  const [goalsScrollRef, setGoalsScrollRef] = useState(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [currentGoalIndex, setCurrentGoalIndex] = useState(0);
 
   const TYPE_ICONS = {
     expense: "💸",
@@ -123,6 +133,60 @@ export default function DashboardSummary({
   useEffect(() => {
     setPageInput(String(transactionsPage));
   }, [transactionsPage]);
+
+  function checkGoalsScrollPos() {
+    if (!goalsScrollRef) return;
+    const el = goalsScrollRef;
+    const maxScrollLeft = el.scrollWidth - el.clientWidth;
+    const safeWidth = Math.max(1, el.clientWidth);
+    const index = Math.round(el.scrollLeft / safeWidth);
+    const boundedIndex = Math.min(
+      Math.max(0, index),
+      Math.max(0, activeInstallments.length - 1),
+    );
+
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < maxScrollLeft - 4);
+    setCurrentGoalIndex(boundedIndex);
+  }
+
+  function scrollGoalsLeft() {
+    if (!goalsScrollRef) return;
+    const containerWidth = goalsScrollRef.clientWidth;
+    const currentIndex = Math.round(goalsScrollRef.scrollLeft / containerWidth);
+    const targetIndex = Math.max(0, currentIndex - 1);
+    goalsScrollRef.scrollTo({
+      left: targetIndex * containerWidth,
+      behavior: "smooth",
+    });
+  }
+
+  function scrollGoalsRight() {
+    if (!goalsScrollRef) return;
+    const containerWidth = goalsScrollRef.clientWidth;
+    const currentIndex = Math.round(goalsScrollRef.scrollLeft / containerWidth);
+    const targetIndex = Math.min(
+      activeInstallments.length - 1,
+      currentIndex + 1,
+    );
+    goalsScrollRef.scrollTo({
+      left: targetIndex * containerWidth,
+      behavior: "smooth",
+    });
+  }
+
+  useEffect(() => {
+    if (activeInstallments.length === 0) {
+      setCurrentGoalIndex(0);
+      return;
+    }
+
+    if (currentGoalIndex > activeInstallments.length - 1) {
+      setCurrentGoalIndex(activeInstallments.length - 1);
+    }
+
+    checkGoalsScrollPos();
+  }, [goalsScrollRef, activeInstallments]);
 
   async function handleSaveInstallmentEdit(updatedInstallment) {
     if (!editingInstallment?.id || !updateInstallment || savingInstallment) {
@@ -160,7 +224,7 @@ export default function DashboardSummary({
         : "Overspent";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full overflow-hidden">
       {loading ? (
         <p className="text-sm text-slate-500">
           Loading Firestore transactions...
@@ -182,9 +246,7 @@ export default function DashboardSummary({
           </p>
         </div>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-          {selectedMonthSummary.monthlyTransactions.length > 0
-            ? `${selectedMonthSummary.monthlyTransactions.length} in ${selectedPeriodLabel}`
-            : selectedPeriodLabel}
+          {selectedPeriodSummaryLabel}
         </span>
       </div>
 
@@ -255,9 +317,9 @@ export default function DashboardSummary({
       </div>
 
       {/* MAIN LAYOUT: Split 75% Left (Main Content) and 25% Right (Sidebar) */}
-      <div className="grid gap-6 lg:grid-cols-4">
+      <div className="grid gap-6 lg:grid-cols-4 w-full overflow-hidden">
         {/* LEFT SECTION (75% Width equivalent using grid span) */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-6 w-full overflow-hidden">
           {/* Quick Stats Row */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
@@ -313,7 +375,7 @@ export default function DashboardSummary({
           </div>
 
           {/* Transactions Table CONTAINER */}
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-soft">
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-soft w-full overflow-hidden">
             <div className="border-b border-slate-200 px-5 py-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -426,7 +488,7 @@ export default function DashboardSummary({
                 </div>
 
                 {/* DESKTOP VIEW: Fixed width layout with table-fixed & customized column percentages */}
-                <div className="hidden sm:block overflow-x-auto">
+                <div className="hidden sm:block overflow-x-auto max-w-full">
                   <table className="w-full table-auto text-sm">
                     <colgroup>
                       <col className="w-[14%]" /> {/* Date */}
@@ -620,11 +682,11 @@ export default function DashboardSummary({
           </div>
 
           {/* Historical Summary */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft w-full overflow-hidden">
             <h3 className="text-sm font-semibold text-slate-900">
               Historical Overview
             </h3>
-            <div className="mt-4 space-y-3 max-h-96 overflow-y-auto">
+            <div className="mt-4 space-y-3 max-h-96 overflow-y-auto w-full">
               {groupedTransactions.length > 0 ? (
                 groupedTransactions.map((group) => {
                   const periodKey = getPeriodKey(group.year, group.month);
@@ -672,7 +734,7 @@ export default function DashboardSummary({
         </div>
 
         {/* RIGHT SECTION / SIDEBAR (25% Width equivalent) */}
-        <aside className="lg:col-span-1 space-y-6">
+        <aside className="lg:col-span-1 space-y-6 w-full overflow-hidden">
           <label className="block rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-soft cursor-pointer hover:shadow-md transition-shadow">
             <span className="text-xs font-semibold uppercase tracking-wide text-blue-700">
               Monthly Income
@@ -700,36 +762,105 @@ export default function DashboardSummary({
             formatCurrency={formatCurrency}
           />
 
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-soft">
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-soft w-full overflow-hidden">
             <div className="border-b border-slate-200 px-5 py-4">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold text-slate-900">
                   Financial Goals
                 </h3>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  {installmentsLoading ? "..." : activeInstallments.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {!installmentsLoading && activeInstallments.length > 1 ? (
+                    <div className="hidden sm:flex items-center gap-2">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                        {currentGoalIndex + 1}/{activeInstallments.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={scrollGoalsLeft}
+                        disabled={!canScrollLeft}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
+                        aria-label="Previous goal"
+                      >
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M12.5 4.5L7 10l5.5 5.5"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={scrollGoalsRight}
+                        disabled={!canScrollRight}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-35"
+                        aria-label="Next goal"
+                      >
+                        <svg
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M7.5 4.5L13 10l-5.5 5.5"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
 
-            <div className="p-5">
+            <div className="p-5 w-full overflow-hidden">
               {activeInstallments.length > 0 ? (
-                <div className="space-y-4">
-                  {activeInstallments.map((inst) => (
-                    <InstallmentProgressBar
-                      key={inst.id}
-                      installment={inst}
-                      formatCurrency={formatCurrency}
-                      onEdit={(item) => setEditingInstallment(item)}
-                      onPause={() =>
-                        toggleInstallmentStatus &&
-                        toggleInstallmentStatus(
-                          inst.id,
-                          inst.status === "paused" ? "active" : "paused",
-                        )
-                      }
-                    />
-                  ))}
+                <div>
+                  <p className="mb-3 text-xs text-slate-500 sm:hidden">
+                    Swipe left or right to view more goals.
+                  </p>
+                  <div className="relative">
+                    <div
+                      ref={setGoalsScrollRef}
+                      onScroll={checkGoalsScrollPos}
+                      className="w-full overflow-x-auto pb-2 snap-x snap-mandatory overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    >
+                      <div className="flex w-full scroll-smooth">
+                        {activeInstallments.map((inst) => (
+                          <div
+                            key={inst.id}
+                            className="shrink-0 basis-full min-w-0 snap-start snap-always"
+                          >
+                            <InstallmentProgressBar
+                              installment={inst}
+                              formatCurrency={formatCurrency}
+                              onEdit={(item) => setEditingInstallment(item)}
+                              onPause={() =>
+                                toggleInstallmentStatus &&
+                                toggleInstallmentStatus(
+                                  inst.id,
+                                  inst.status === "paused"
+                                    ? "active"
+                                    : "paused",
+                                )
+                              }
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="text-center text-sm text-slate-500">
