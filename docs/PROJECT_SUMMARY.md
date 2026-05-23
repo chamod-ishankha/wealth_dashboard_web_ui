@@ -10,7 +10,7 @@ Wealth Dashboard is a React and Firebase personal finance web app with a respons
 - Typed categories: income, expense, transfer.
 - Period filtering by year and month.
 - Server-side paginated transaction list.
-- Dashboard metrics for income, expenses, and net savings.
+- Dashboard metrics for Monthly Income, Income Transactions, Expense Transactions, Transfer Transactions, and Net Savings.
 - Personal budget status based on Personal expenses.
 - Financial Goals carousel:
   - swipe on mobile
@@ -20,8 +20,10 @@ Wealth Dashboard is a React and Firebase personal finance web app with a respons
 ## Metric Rules
 
 - Monthly Income = configured monthly salary for selected period + selected-period income transactions.
-- Total Expenses = selected-period expense transactions.
-- Net Savings = Monthly Income - Total Expenses.
+- Expense Transactions = selected-period expense transactions.
+- Transfer Transactions = selected-period transfer transactions.
+- Net Savings = Monthly Income - (Expense Transactions + Transfer Transactions).
+- Fixed Expenses = Expense Transactions - Personal Spent.
 - Remaining Personal Budget = personal budget limit - Personal category expenses.
 
 ## Main Modules
