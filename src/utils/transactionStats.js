@@ -94,6 +94,38 @@ export function calculateMonthlySummary(
     );
   });
 
+  // Sort transactions: primary by date (latest first), secondary by category (ascending)
+  monthlyTransactions.sort((a, b) => {
+    // Resolve date to JS Date
+    function toTime(tx) {
+      try {
+        if (!tx) return 0;
+        if (tx.date && tx.date.toDate) return tx.date.toDate().getTime();
+        if (tx.date) return new Date(tx.date).getTime();
+        // Fallback to year/monthIndex/day if available
+        if (tx.year !== undefined && tx.monthIndex !== undefined) {
+          return new Date(
+            Number(tx.year),
+            Number(tx.monthIndex),
+            tx.day || 1,
+          ).getTime();
+        }
+        return 0;
+      } catch (err) {
+        return 0;
+      }
+    }
+
+    const ta = toTime(a);
+    const tb = toTime(b);
+
+    if (ta !== tb) return tb - ta; // latest first
+
+    const ca = (a.category || "").toString();
+    const cb = (b.category || "").toString();
+    return ca.localeCompare(cb);
+  });
+
   const totalIncome = sumTransactions(
     monthlyTransactions,
     (transaction) => transaction.transactionType === "income",

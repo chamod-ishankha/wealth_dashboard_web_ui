@@ -10,13 +10,13 @@ import { setDoc, doc, serverTimestamp } from "firebase/firestore";
 import { auth, db, firebaseReady } from "../firebase";
 
 const DEFAULT_CATEGORIES = [
-  "Fuel",
-  "Bills",
-  "Loan",
-  "Koko",
-  "Personal",
-  "Withdraw",
-  "Reload",
+  { name: "Fuel", type: "expense" },
+  { name: "Bills", type: "expense" },
+  { name: "Loan", type: "expense" },
+  { name: "Koko", type: "expense" },
+  { name: "Personal", type: "expense" },
+  { name: "Withdraw", type: "transfer" },
+  { name: "Reload", type: "income" },
 ];
 
 const AuthContext = createContext(null);

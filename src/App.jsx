@@ -97,16 +97,21 @@ export default function App() {
 
   // Fetch user categories
   const { categories, loading: categoriesLoading } = useCategories(user);
+  const categoryNames = categories.map((category) => category.name);
+
+  function getCategoryType(categoryName) {
+    return categories.find((category) => category.name === categoryName)?.type;
+  }
 
   // Set default category to first available category
   useEffect(() => {
-    if (!formData.category && categories.length > 0) {
+    if (!formData.category && categoryNames.length > 0) {
       setFormData((prev) => ({
         ...prev,
-        category: categories[0],
+        category: categoryNames[0],
       }));
     }
-  }, [categories]);
+  }, [categoryNames, formData.category]);
 
   useEffect(() => {
     setSalaryByPeriod((current) => ({
@@ -233,7 +238,9 @@ export default function App() {
 
     const year = selectedDate.getFullYear();
     const monthIndex = selectedDate.getMonth();
-    const transactionType = getTransactionType(formData.category);
+    const transactionType =
+      getCategoryType(formData.category) ||
+      getTransactionType(formData.category);
     const amount = Number(formData.amount);
 
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -254,7 +261,8 @@ export default function App() {
       .then(() => {
         setFormData({
           date: "",
-          category: categories && categories.length > 0 ? categories[0] : "",
+          category:
+            categoryNames && categoryNames.length > 0 ? categoryNames[0] : "",
           amount: "",
           description: "",
         });
@@ -322,7 +330,7 @@ export default function App() {
     setEditingTransaction({
       id: transaction.id,
       date: dateStr,
-      category: transaction.category || "Fuel",
+      category: transaction.category || categoryNames[0] || "",
       amount: String(transaction.amount ?? ""),
       description: transaction.description || "",
     });
@@ -372,7 +380,9 @@ export default function App() {
       year,
       monthIndex,
       category: editingTransaction.category,
-      transactionType: getTransactionType(editingTransaction.category),
+      transactionType:
+        getCategoryType(editingTransaction.category) ||
+        getTransactionType(editingTransaction.category),
       amount,
       description: editingTransaction.description.trim(),
       updatedAt: serverTimestamp(),
@@ -555,8 +565,8 @@ export default function App() {
                     className="rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                   >
                     {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
+                      <option key={category.name} value={category.name}>
+                        {category.name} ({category.type})
                       </option>
                     ))}
                   </select>

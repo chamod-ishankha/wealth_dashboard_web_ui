@@ -75,8 +75,8 @@ export default function TransactionsEntryForm({
               className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
             >
               {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+                <option key={category.name} value={category.name}>
+                  {category.name} ({category.type})
                 </option>
               ))}
             </select>

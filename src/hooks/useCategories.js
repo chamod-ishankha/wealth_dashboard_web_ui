@@ -1,12 +1,40 @@
 import { useEffect, useState } from "react";
-import {
-  doc,
-  onSnapshot,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-} from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
+
+const CATEGORY_TYPES = ["expense", "income", "transfer"];
+
+function normalizeCategoryType(type) {
+  const value = String(type || "expense").toLowerCase();
+  return CATEGORY_TYPES.includes(value) ? value : "expense";
+}
+
+function normalizeCategory(category) {
+  if (!category) return null;
+
+  if (typeof category === "string") {
+    const name = category.trim();
+    if (!name) return null;
+
+    return {
+      name,
+      type:
+        name === "Reload"
+          ? "income"
+          : name === "Withdraw"
+            ? "transfer"
+            : "expense",
+    };
+  }
+
+  const name = String(category.name || category.label || "").trim();
+  if (!name) return null;
+
+  return {
+    name,
+    type: normalizeCategoryType(category.type),
+  };
+}
 
 export default function useCategories(user) {
   const [categories, setCategories] = useState([]);
@@ -25,7 +53,10 @@ export default function useCategories(user) {
       doc(db, "userCategories", categoriesDocId),
       (snapshot) => {
         if (snapshot.exists()) {
-          setCategories(snapshot.data().categories || []);
+          const normalized = (snapshot.data().categories || [])
+            .map(normalizeCategory)
+            .filter(Boolean);
+          setCategories(normalized);
           setError("");
         } else {
           setCategories([]);
@@ -42,19 +73,59 @@ export default function useCategories(user) {
     return unsubscribe;
   }, [user?.uid]);
 
-  async function addCategory(categoryName) {
+  async function addCategory(categoryName, categoryType = "expense") {
     if (!user?.uid || !db || !categoryName.trim()) {
       return;
     }
 
     const categoriesDocId = `${user.uid}_categories`;
     try {
-      await updateDoc(doc(db, "userCategories", categoriesDocId), {
-        categories: arrayUnion(categoryName.trim()),
-        updatedAt: new Date(),
+      const newCategory = normalizeCategory({
+        name: categoryName.trim(),
+        type: categoryType,
       });
+      const nextCategories = [...categories, newCategory].filter(Boolean);
+
+      await setDoc(
+        doc(db, "userCategories", categoriesDocId),
+        {
+          userId: user.uid,
+          categories: nextCategories,
+          updatedAt: new Date(),
+        },
+        { merge: true },
+      );
     } catch (err) {
       console.error("Failed to add category:", err);
+      setError(err.message);
+    }
+  }
+
+  async function updateCategory(previousName, nextCategory) {
+    if (!user?.uid || !db || !previousName || !nextCategory?.name?.trim()) {
+      return;
+    }
+
+    const categoriesDocId = `${user.uid}_categories`;
+    try {
+      const normalized = normalizeCategory(nextCategory);
+      const nextCategories = categories
+        .map((category) =>
+          category.name === previousName ? normalized : category,
+        )
+        .filter(Boolean);
+
+      await setDoc(
+        doc(db, "userCategories", categoriesDocId),
+        {
+          userId: user.uid,
+          categories: nextCategories,
+          updatedAt: new Date(),
+        },
+        { merge: true },
+      );
+    } catch (err) {
+      console.error("Failed to update category:", err);
       setError(err.message);
     }
   }
@@ -66,15 +137,34 @@ export default function useCategories(user) {
 
     const categoriesDocId = `${user.uid}_categories`;
     try {
-      await updateDoc(doc(db, "userCategories", categoriesDocId), {
-        categories: arrayRemove(categoryName),
-        updatedAt: new Date(),
-      });
+      const nextCategories = categories.filter(
+        (category) => category.name !== categoryName,
+      );
+
+      await setDoc(
+        doc(db, "userCategories", categoriesDocId),
+        {
+          userId: user.uid,
+          categories: nextCategories,
+          updatedAt: new Date(),
+        },
+        { merge: true },
+      );
     } catch (err) {
       console.error("Failed to remove category:", err);
       setError(err.message);
     }
   }
 
-  return { categories, loading, error, addCategory, removeCategory };
+  const categoryNames = categories.map((category) => category.name);
+
+  return {
+    categories,
+    categoryNames,
+    loading,
+    error,
+    addCategory,
+    updateCategory,
+    removeCategory,
+  };
 }
