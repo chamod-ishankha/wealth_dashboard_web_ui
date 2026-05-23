@@ -12,6 +12,7 @@ import {
 import DashboardSummary from "./components/DashboardSummary";
 import StatCard from "./components/StatCard";
 import TransactionsEntryForm from "./components/TransactionsEntryForm";
+import CategoryTypeSelect from "./components/CategoryTypeSelect";
 import { useAuth } from "./context/AuthContext";
 import useMonthlySalaries from "./hooks/useMonthlySalaries";
 import useTransactions from "./hooks/useTransactions";
@@ -118,6 +119,12 @@ export default function App() {
   function getCategoryType(categoryName) {
     return categories.find((category) => category.name === categoryName)?.type;
   }
+
+  const TYPE_ICONS = {
+    expense: "💸",
+    income: "💰",
+    transfer: "🔁",
+  };
 
   // Set default category to first available category
   useEffect(() => {
@@ -587,18 +594,13 @@ export default function App() {
                   <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                     Category
                   </span>
-                  <select
+                  <CategoryTypeSelect
                     name="category"
                     value={editingTransaction.category}
+                    categories={categories}
                     onChange={handleEditChange}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                  >
-                    {categories.map((category) => (
-                      <option key={category.name} value={category.name}>
-                        {category.name} ({category.type})
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select category"
+                  />
                 </label>
 
                 <label className="grid gap-2">

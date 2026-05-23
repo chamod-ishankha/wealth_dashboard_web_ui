@@ -103,6 +103,23 @@ export default function DashboardSummary({
   const [savingInstallment, setSavingInstallment] = useState(false);
   const [pageInput, setPageInput] = useState(String(transactionsPage));
 
+  const TYPE_ICONS = {
+    expense: "💸",
+    income: "💰",
+    transfer: "🔁",
+  };
+  const TYPE_BADGES = {
+    expense: "border-rose-200 bg-rose-50 text-rose-700",
+    income: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    transfer: "border-amber-200 bg-amber-50 text-amber-700",
+  };
+
+  const TYPE_LABELS = {
+    expense: "Expense",
+    income: "Income",
+    transfer: "Transfer",
+  };
+
   useEffect(() => {
     setPageInput(String(transactionsPage));
   }, [transactionsPage]);
@@ -332,6 +349,8 @@ export default function DashboardSummary({
                       ? "text-emerald-600 font-semibold"
                       : "text-slate-900 font-semibold";
                     const amountPrefix = isIncome ? "+" : "−";
+                    const typeIcon =
+                      TYPE_ICONS[transaction.transactionType] || "•";
 
                     return (
                       <div
@@ -352,6 +371,19 @@ export default function DashboardSummary({
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-slate-900 truncate">
                                 {transaction.category || "Transaction"}
+                                <span
+                                  className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                    TYPE_BADGES[transaction.transactionType] ||
+                                    "border-slate-200 bg-slate-100 text-slate-600"
+                                  }`}
+                                >
+                                  <span className="mr-1">{typeIcon}</span>
+                                  <span className="uppercase text-[10px]">
+                                    {TYPE_LABELS[transaction.transactionType] ||
+                                      transaction.transactionType ||
+                                      "transfer"}
+                                  </span>
+                                </span>
                               </p>
                               <p className="w-[180px] max-w-[180px] truncate text-xs text-slate-500 sm:w-[220px] sm:max-w-[220px]">
                                 {transaction.description || "No description"}
@@ -395,13 +427,13 @@ export default function DashboardSummary({
 
                 {/* DESKTOP VIEW: Fixed width layout with table-fixed & customized column percentages */}
                 <div className="hidden sm:block overflow-x-auto">
-                  <table className="w-full table-fixed text-sm">
+                  <table className="w-full table-auto text-sm">
                     <colgroup>
                       <col className="w-[14%]" /> {/* Date */}
                       <col className="w-[16%]" /> {/* Category */}
                       <col className="w-[34%]" />
                       {/* Description */}
-                      <col className="w-[12%]" /> {/* Type */}
+                      <col /> {/* Type - dynamic width */}
                       <col className="w-[12%]" /> {/* Amount */}
                       <col className="w-[12%]" /> {/* Actions */}
                     </colgroup>
@@ -460,13 +492,20 @@ export default function DashboardSummary({
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
                               <span
-                                className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                  isIncome
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : "bg-rose-100 text-rose-700"
+                                className={`inline-flex items-center max-w-full rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                  TYPE_BADGES[transaction.transactionType] ||
+                                  "border-slate-200 bg-slate-100 text-slate-600"
                                 }`}
                               >
-                                {transaction.transactionType || "transfer"}
+                                <span className="mr-2">
+                                  {TYPE_ICONS[transaction.transactionType] ||
+                                    "•"}
+                                </span>
+                                <span>
+                                  {TYPE_LABELS[transaction.transactionType] ||
+                                    transaction.transactionType ||
+                                    "transfer"}
+                                </span>
                               </span>
                             </td>
                             <td

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import InstallmentSetupForm from "./InstallmentSetupForm";
+import CategoryTypeSelect from "./CategoryTypeSelect";
 
 export default function TransactionsEntryForm({
   categories,
@@ -68,18 +69,13 @@ export default function TransactionsEntryForm({
 
           <label className="grid gap-2">
             <span className="text-sm font-medium text-slate-700">Category</span>
-            <select
+            <CategoryTypeSelect
               name="category"
               value={formData.category}
+              categories={categories}
               onChange={onChange}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
-            >
-              {categories.map((category) => (
-                <option key={category.name} value={category.name}>
-                  {category.name} ({category.type})
-                </option>
-              ))}
-            </select>
+              placeholder="Select category"
+            />
           </label>
 
           <label className="grid gap-2">
