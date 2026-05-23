@@ -15,7 +15,6 @@ import useUserSettings from "../hooks/useUserSettings";
 function formatTimestamp(timestamp) {
   if (!timestamp) return "—";
 
-  // If it's a Firestore Timestamp object with toDate method
   if (timestamp.toDate) {
     const date = timestamp.toDate();
     return date.toLocaleDateString("en-US", {
@@ -25,7 +24,6 @@ function formatTimestamp(timestamp) {
     });
   }
 
-  // If it's already a Date object
   if (timestamp instanceof Date) {
     return timestamp.toLocaleDateString("en-US", {
       year: "numeric",
@@ -34,7 +32,6 @@ function formatTimestamp(timestamp) {
     });
   }
 
-  // If it's a string, return as is
   if (typeof timestamp === "string") {
     return timestamp;
   }
@@ -80,7 +77,6 @@ export default function DashboardSummary({
     [transactions, selectedYear, selectedMonth, budgetLimit, monthlySalary],
   );
 
-  // Installments hook
   const { user } = useAuth();
   const {
     activeInstallments = [],
@@ -142,7 +138,7 @@ export default function DashboardSummary({
         </div>
       ) : null}
 
-      {/* HEADER: Title + Period Controls */}
+      {/* HEADER */}
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Dashboard</h2>
@@ -157,7 +153,7 @@ export default function DashboardSummary({
         </span>
       </div>
 
-      {/* PERIOD SELECTOR: Year & Month Dropdowns */}
+      {/* PERIOD SELECTOR */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-2">
@@ -204,7 +200,7 @@ export default function DashboardSummary({
         </div>
       </div>
 
-      {/* TOP SECTION: 3-COLUMN STAT GRID (High-Impact) */}
+      {/* STAT GRID */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Monthly Income"
@@ -223,10 +219,10 @@ export default function DashboardSummary({
         />
       </div>
 
-      {/* MAIN CONTENT AREA: 2-COLUMN LAYOUT (lg:col-span-2 left, lg:col-span-1 right) */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* LEFT SECTION: Transactions Table (2 columns) */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* MAIN LAYOUT: Split 75% Left (Main Content) and 25% Right (Sidebar) */}
+      <div className="grid gap-6 lg:grid-cols-4">
+        {/* LEFT SECTION (75% Width equivalent using grid span) */}
+        <div className="lg:col-span-3 space-y-6">
           {/* Quick Stats Row */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
@@ -281,7 +277,7 @@ export default function DashboardSummary({
             </div>
           </div>
 
-          {/* Transactions Table */}
+          {/* Transactions Table CONTAINER */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-soft">
             <div className="border-b border-slate-200 px-5 py-4">
               <div className="flex items-center justify-between gap-3">
@@ -301,7 +297,7 @@ export default function DashboardSummary({
 
             {selectedMonthSummary.monthlyTransactions.length > 0 ? (
               <>
-                {/* MOBILE VIEW: Card-based layout (block sm:hidden) */}
+                {/* MOBILE VIEW */}
                 <div className="block sm:hidden divide-y divide-slate-100">
                   {selectedMonthSummary.monthlyTransactions.map(
                     (transaction) => {
@@ -319,21 +315,20 @@ export default function DashboardSummary({
                           }
                           className="group flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer active:bg-slate-100"
                         >
-                          {/* Left: Category, Title, Date */}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-3">
-                              {/* Category Badge/Icon */}
                               <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
                                 <span className="text-sm font-semibold text-slate-600">
                                   {transaction.category?.[0]?.toUpperCase() ||
                                     "?"}
                                 </span>
                               </div>
-
-                              {/* Title & Details */}
                               <div className="min-w-0">
                                 <p className="text-sm font-medium text-slate-900 truncate">
                                   {transaction.category || "Transaction"}
+                                </p>
+                                <p className="w-[180px] max-w-[180px] truncate text-xs text-slate-500 sm:w-[220px] sm:max-w-[220px]">
+                                  {transaction.description || "No description"}
                                 </p>
                                 <p className="text-xs text-slate-500">
                                   {formatTimestamp(transaction.date)}
@@ -341,8 +336,6 @@ export default function DashboardSummary({
                               </div>
                             </div>
                           </div>
-
-                          {/* Right: Amount */}
                           <div className="shrink-0 text-right">
                             <p className={`text-sm font-bold ${amountColor}`}>
                               {amountPrefix}
@@ -375,24 +368,37 @@ export default function DashboardSummary({
                   )}
                 </div>
 
-                {/* DESKTOP VIEW: Spacious table (hidden sm:table) */}
+                {/* DESKTOP VIEW: Fixed width layout with table-fixed & customized column percentages */}
                 <div className="hidden sm:block overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full table-fixed text-sm">
+                    <colgroup>
+                      <col className="w-[14%]" /> {/* Date */}
+                      <col className="w-[16%]" />{" "}
+                      {/* Category (Slightly increased) */}
+                      <col className="w-[34%]" />{" "}
+                      {/* Description (Optimized) */}
+                      <col className="w-[12%]" /> {/* Type */}
+                      <col className="w-[12%]" /> {/* Amount */}
+                      <col className="w-[12%]" /> {/* Actions */}
+                    </colgroup>
                     <thead className="bg-slate-50/50 border-b border-slate-100">
                       <tr>
-                        <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                        <th className="px-4 py-4 text-left font-semibold text-slate-700">
                           Date
                         </th>
-                        <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                        <th className="px-4 py-4 text-left font-semibold text-slate-700">
                           Category
                         </th>
-                        <th className="px-6 py-4 text-left font-semibold text-slate-700">
+                        <th className="px-4 py-4 text-left font-semibold text-slate-700">
+                          Description
+                        </th>
+                        <th className="px-4 py-4 text-left font-semibold text-slate-700">
                           Type
                         </th>
-                        <th className="px-6 py-4 text-right font-semibold text-slate-700">
+                        <th className="px-4 py-4 text-right font-semibold text-slate-700">
                           Amount
                         </th>
-                        <th className="px-6 py-4 text-right font-semibold text-slate-700">
+                        <th className="px-4 py-4 text-right font-semibold text-slate-700">
                           Actions
                         </th>
                       </tr>
@@ -415,15 +421,23 @@ export default function DashboardSummary({
                               }
                               className="hover:bg-slate-50 transition-colors"
                             >
-                              <td className="px-6 py-4 text-slate-600">
+                              <td className="px-4 py-4 text-slate-600 truncate">
                                 {formatTimestamp(transaction.date)}
                               </td>
-                              <td className="px-6 py-4 font-medium text-slate-900">
+                              <td className="px-4 py-4 font-medium text-slate-900 truncate">
                                 {transaction.category || "—"}
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="px-4 py-4 text-slate-600">
+                                <div
+                                  className="block w-full min-w-0 truncate"
+                                  title={transaction.description}
+                                >
+                                  {transaction.description || "No description"}
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 whitespace-nowrap">
                                 <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                                  className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-semibold ${
                                     isIncome
                                       ? "bg-emerald-100 text-emerald-700"
                                       : "bg-rose-100 text-rose-700"
@@ -433,15 +447,15 @@ export default function DashboardSummary({
                                 </span>
                               </td>
                               <td
-                                className={`px-6 py-4 text-right font-semibold ${amountColor}`}
+                                className={`px-4 py-4 text-right font-semibold ${amountColor}`}
                               >
                                 {amountPrefix}
                                 {formatCurrency(
                                   Number(transaction.amount || 0),
                                 )}
                               </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-3">
+                              <td className="px-4 py-4 text-right">
+                                <div className="flex justify-end gap-2">
                                   <button
                                     type="button"
                                     onClick={() =>
@@ -529,9 +543,8 @@ export default function DashboardSummary({
           </div>
         </div>
 
-        {/* RIGHT SECTION: Sidebar Widgets (1 column) */}
+        {/* RIGHT SECTION / SIDEBAR (25% Width equivalent) */}
         <aside className="lg:col-span-1 space-y-6">
-          {/* Monthly Salary Input */}
           <label className="block rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-soft cursor-pointer hover:shadow-md transition-shadow">
             <span className="text-xs font-semibold uppercase tracking-wide text-blue-700">
               Monthly Income
@@ -552,7 +565,6 @@ export default function DashboardSummary({
             </p>
           </label>
 
-          {/* Safe to Spend Calculator */}
           <SafeToSpendCalculator
             budgetLimit={budgetLimit}
             personalExpensesSpent={selectedMonthSummary.personalExpenses}
@@ -560,7 +572,6 @@ export default function DashboardSummary({
             formatCurrency={formatCurrency}
           />
 
-          {/* Installments Section */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-soft">
             <div className="border-b border-slate-200 px-5 py-4">
               <div className="flex items-center justify-between gap-3">

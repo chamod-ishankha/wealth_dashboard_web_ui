@@ -56,13 +56,15 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen w-full bg-[#f8fafc] pt-8 pb-12 px-4 relative overflow-y-auto bg-minimal-grid bg-[length:24px_24px]">
+      {/* Background Glow FX */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
         <div className="absolute right-[-4rem] top-20 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-slate-500/10 blur-3xl" />
       </div>
 
-      <div className="max-w-6xl mx-auto w-full mb-6">
+      {/* Navigation - Exact 1220px Match */}
+      <div className="max-w-[1220px] mx-auto w-full">
         <button
           type="button"
           onClick={() => navigate("/")}
@@ -84,8 +86,10 @@ export default function Profile() {
         </button>
       </div>
 
-      <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm flex flex-col items-center text-center">
+      {/* Main Content Layout - Exact 1220px Match with Balanced Grid */}
+      <div className="max-w-[1220px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT CARD: User Profile (3 Columns) */}
+        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm flex flex-col items-center text-center">
           <div className="w-24 h-24 rounded-full overflow-hidden flex-shrink-0 border-2 border-slate-100 shadow-sm mb-4">
             {user?.photoURL ? (
               <img
@@ -100,9 +104,11 @@ export default function Profile() {
             )}
           </div>
 
-          <h1 className="text-2xl font-semibold text-slate-900">{fullName}</h1>
-          <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <h1 className="text-xl font-semibold text-slate-900 truncate w-full px-2">
+            {fullName}
+          </h1>
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 max-w-full">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
             <span className="truncate">{email}</span>
           </div>
 
@@ -115,7 +121,8 @@ export default function Profile() {
           </button>
         </div>
 
-        <div className="lg:col-span-2 flex flex-col gap-8 w-full">
+        {/* RIGHT CARDS: Financial Settings & Categories (9 Columns) */}
+        <div className="lg:col-span-9 flex flex-col gap-6 w-full">
           <form
             onSubmit={handleSaveSalaryDate}
             className="w-full bg-white rounded-2xl border border-slate-200/60 p-6 shadow-sm"
@@ -159,23 +166,23 @@ export default function Profile() {
               </div>
             </div>
 
-            {loading ? (
+            {loading && (
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
                 Loading saved payout date...
               </div>
-            ) : null}
+            )}
 
-            {error ? (
+            {error && (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                 {error}
               </div>
-            ) : null}
+            )}
 
-            {saveMessage ? (
+            {saveMessage && (
               <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                 {saveMessage}
               </div>
-            ) : null}
+            )}
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-slate-500">
