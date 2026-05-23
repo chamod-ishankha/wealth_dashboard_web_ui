@@ -44,8 +44,9 @@ export const EXPENSE_CATEGORIES = new Set([
   "Loan",
   "Koko",
   "Personal",
+  "Reload",
 ]);
-export const INCOME_CATEGORIES = new Set(["Reload"]);
+export const INCOME_CATEGORIES = new Set([]);
 
 export function getTransactionType(category = "") {
   if (INCOME_CATEGORIES.has(category)) {

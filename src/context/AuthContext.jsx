@@ -16,7 +16,7 @@ const DEFAULT_CATEGORIES = [
   { name: "Koko", type: "expense" },
   { name: "Personal", type: "expense" },
   { name: "Withdraw", type: "transfer" },
-  { name: "Reload", type: "income" },
+  { name: "Reload", type: "expense" },
 ];
 
 const AuthContext = createContext(null);

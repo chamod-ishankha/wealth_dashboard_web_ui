@@ -20,7 +20,7 @@ function normalizeCategory(category) {
       name,
       type:
         name === "Reload"
-          ? "income"
+          ? "expense"
           : name === "Withdraw"
             ? "transfer"
             : "expense",
