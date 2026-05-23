@@ -301,7 +301,7 @@ export default function DashboardSummary({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Monthly Income"
-          value={formatCurrency(monthlySalary || 0)}
+          value={formatCurrency(selectedMonthSummary.monthlySalary || 0)}
           accent="blue"
         />
         <StatCard

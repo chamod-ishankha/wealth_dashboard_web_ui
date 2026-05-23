@@ -126,32 +126,45 @@ export function calculateMonthlySummary(
     return ca.localeCompare(cb);
   });
 
-  const totalIncome = sumTransactions(
-    monthlyTransactions,
-    (transaction) => transaction.transactionType === "income",
-  );
+  const totalIncome = sumTransactions(monthlyTransactions, (transaction) => {
+    const transactionType = String(
+      transaction.transactionType || getTransactionType(transaction.category),
+    ).toLowerCase();
+
+    return transactionType === "income";
+  });
 
   // Separate Personal expenses from Fixed expenses
   const personalExpenses = sumTransactions(
     monthlyTransactions,
-    (transaction) =>
-      transaction.transactionType === "expense" &&
-      transaction.category === "Personal",
+    (transaction) => {
+      const transactionType = String(
+        transaction.transactionType || getTransactionType(transaction.category),
+      ).toLowerCase();
+
+      return (
+        transactionType === "expense" && transaction.category === "Personal"
+      );
+    },
   );
 
-  const fixedExpenses = sumTransactions(
-    monthlyTransactions,
-    (transaction) =>
-      transaction.transactionType === "expense" &&
-      transaction.category !== "Personal",
-  );
+  const fixedExpenses = sumTransactions(monthlyTransactions, (transaction) => {
+    const transactionType = String(
+      transaction.transactionType || getTransactionType(transaction.category),
+    ).toLowerCase();
+
+    return transactionType === "expense" && transaction.category !== "Personal";
+  });
 
   const totalExpenses = personalExpenses + fixedExpenses;
 
-  const monthlySalary =
+  const configuredSalary =
     Number.isFinite(Number(salaryOverride)) && Number(salaryOverride) > 0
       ? Number(salaryOverride)
-      : totalIncome;
+      : 0;
+
+  // Monthly income = configured base salary + income transactions for the period.
+  const monthlySalary = configuredSalary + totalIncome;
 
   const netSavings = monthlySalary - totalExpenses;
 
