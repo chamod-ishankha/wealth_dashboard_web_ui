@@ -68,7 +68,7 @@ export default function Profile() {
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium text-sm mb-6 transition-colors hover:-translate-x-1 transition-transform"
+          className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium text-sm mb-6 transition-colors hover:-translate-x-1"
         >
           <svg
             viewBox="0 0 24 24"

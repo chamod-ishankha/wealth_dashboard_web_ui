@@ -92,12 +92,15 @@ export default function App() {
     loading: paginatedLoading,
     error: paginatedError,
     page: transactionsPage,
+    totalPages: transactionsTotalPages,
     hasNextPage,
     hasPrevPage,
     totalCount: paginatedTotalCount,
     pageSize: transactionsPageSize,
+    setPageSize: setTransactionsPageSize,
     nextPage,
     prevPage,
+    goToPage,
   } = usePaginatedTransactions(user, selectedYear, selectedMonth, 10);
   const {
     salaryByPeriod: remoteSalaryByPeriod,
@@ -458,9 +461,12 @@ export default function App() {
               tableError={paginatedError}
               transactionsPage={transactionsPage}
               transactionsPageSize={transactionsPageSize}
+              transactionsTotalPages={transactionsTotalPages}
               hasNextPage={hasNextPage}
               hasPrevPage={hasPrevPage}
               paginatedTotalCount={paginatedTotalCount}
+              onChangePageSize={setTransactionsPageSize}
+              onGoToPage={goToPage}
               onNextPage={nextPage}
               onPrevPage={prevPage}
               groupedTransactions={groupedTransactions}

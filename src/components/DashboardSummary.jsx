@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import StatCard from "./StatCard";
 import {
@@ -59,9 +59,12 @@ export default function DashboardSummary({
   tableError = "",
   transactionsPage = 1,
   transactionsPageSize = 10,
+  transactionsTotalPages = 1,
   hasNextPage = false,
   hasPrevPage = false,
   paginatedTotalCount = 0,
+  onChangePageSize,
+  onGoToPage,
   onNextPage,
   onPrevPage,
   groupedTransactions = [],
@@ -98,6 +101,11 @@ export default function DashboardSummary({
   const salaryDate = salaryDateProp || realtimeSalaryDate;
   const [editingInstallment, setEditingInstallment] = useState(null);
   const [savingInstallment, setSavingInstallment] = useState(false);
+  const [pageInput, setPageInput] = useState(String(transactionsPage));
+
+  useEffect(() => {
+    setPageInput(String(transactionsPage));
+  }, [transactionsPage]);
 
   async function handleSaveInstallmentEdit(updatedInstallment) {
     if (!editingInstallment?.id || !updateInstallment || savingInstallment) {
@@ -390,10 +398,9 @@ export default function DashboardSummary({
                   <table className="w-full table-fixed text-sm">
                     <colgroup>
                       <col className="w-[14%]" /> {/* Date */}
-                      <col className="w-[16%]" />{" "}
-                      {/* Category (Slightly increased) */}
-                      <col className="w-[34%]" />{" "}
-                      {/* Description (Optimized) */}
+                      <col className="w-[16%]" /> {/* Category */}
+                      <col className="w-[34%]" />
+                      {/* Description */}
                       <col className="w-[12%]" /> {/* Type */}
                       <col className="w-[12%]" /> {/* Amount */}
                       <col className="w-[12%]" /> {/* Actions */}
@@ -497,9 +504,9 @@ export default function DashboardSummary({
                   </table>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3">
                   <p className="text-xs text-slate-500">
-                    Page {transactionsPage}
+                    Page {transactionsPage} of {transactionsTotalPages}
                     {paginatedTotalCount > 0
                       ? ` • ${Math.min(
                           (transactionsPage - 1) * transactionsPageSize + 1,
@@ -511,7 +518,42 @@ export default function DashboardSummary({
                       : ""}
                   </p>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                      <span>Rows</span>
+                      <select
+                        value={transactionsPageSize}
+                        onChange={(event) =>
+                          onChangePageSize?.(Number(event.target.value))
+                        }
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        max={transactionsTotalPages}
+                        value={pageInput}
+                        onChange={(event) => setPageInput(event.target.value)}
+                        className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onGoToPage?.(Number(pageInput))}
+                        disabled={tableLoading}
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Go
+                      </button>
+                    </div>
+
                     <button
                       type="button"
                       onClick={() => onPrevPage?.()}

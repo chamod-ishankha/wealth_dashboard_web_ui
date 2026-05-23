@@ -24,6 +24,12 @@ export default function CategoryManager() {
     transfer: "border-amber-200 bg-amber-50 text-amber-700",
   };
 
+  const TYPE_ICONS = {
+    expense: "💸",
+    income: "💰",
+    transfer: "🔁",
+  };
+
   const TYPE_LABELS = {
     expense: "Expense",
     income: "Income",
@@ -138,14 +144,17 @@ export default function CategoryManager() {
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-slate-600">
-        <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700">
-          Expense
+        <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700 flex items-center gap-2">
+          <span>{TYPE_ICONS.expense}</span>
+          <span>Expense</span>
         </span>
-        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
-          Income
+        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700 flex items-center gap-2">
+          <span>{TYPE_ICONS.income}</span>
+          <span>Income</span>
         </span>
-        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">
-          Transfer
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 flex items-center gap-2">
+          <span>{TYPE_ICONS.transfer}</span>
+          <span>Transfer</span>
         </span>
       </div>
 
@@ -220,9 +229,14 @@ export default function CategoryManager() {
               >
                 <span>{category.name}</span>
                 <span
-                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TYPE_BADGES[category.type] || "border-slate-200 bg-slate-100 text-slate-600"}`}
+                  className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide flex items-center gap-2 ${TYPE_BADGES[category.type] || "border-slate-200 bg-slate-100 text-slate-600"}`}
                 >
-                  {TYPE_LABELS[category.type] || category.type || "Expense"}
+                  <span className="text-[11px] leading-none">
+                    {TYPE_ICONS[category.type] || "•"}
+                  </span>
+                  <span>
+                    {TYPE_LABELS[category.type] || category.type || "Expense"}
+                  </span>
                 </span>
                 <button
                   type="button"

@@ -22,12 +22,13 @@ export default function usePaginatedTransactions(
   user,
   selectedYear,
   selectedMonth,
-  pageSize = 10,
+  initialPageSize = 10,
 ) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
@@ -45,7 +46,55 @@ export default function usePaginatedTransactions(
     setHasNextPage(false);
     setPageCursors([null]);
     setLastVisible(null);
-  }, [user?.uid, selectedYear, selectedMonth]);
+  }, [user?.uid, selectedYear, selectedMonth, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
+
+  const getBaseQuery = useCallback(() => {
+    if (!db || !user?.uid || !selectedYear || monthIndex === null) {
+      return null;
+    }
+
+    return query(
+      collection(db, "transactions"),
+      where("userId", "==", user.uid),
+      where("year", "==", Number(selectedYear)),
+      where("monthIndex", "==", Number(monthIndex)),
+      orderBy("date", "desc"),
+    );
+  }, [monthIndex, selectedYear, user?.uid]);
+
+  const ensureCursorForPage = useCallback(
+    async (targetPage) => {
+      if (targetPage <= 1) return null;
+
+      const baseQuery = getBaseQuery();
+      if (!baseQuery) return null;
+
+      let cursors = [...pageCursors];
+
+      // Build missing cursors incrementally up to the target page.
+      for (let pageNumber = 2; pageNumber <= targetPage; pageNumber += 1) {
+        const cursorIndex = pageNumber - 1;
+        if (cursors[cursorIndex] !== undefined) continue;
+
+        const prevCursor = cursors[cursorIndex - 1] || null;
+        const q = prevCursor
+          ? query(baseQuery, startAfter(prevCursor), limit(pageSize))
+          : query(baseQuery, limit(pageSize));
+        const snap = await getDocs(q);
+
+        const docForNextCursor = snap.docs[snap.docs.length - 1] || null;
+        cursors[cursorIndex] = docForNextCursor;
+
+        if (snap.empty) break;
+      }
+
+      setPageCursors(cursors);
+      return cursors[targetPage - 1] || null;
+    },
+    [getBaseQuery, pageCursors, pageSize],
+  );
 
   const fetchPage = useCallback(async () => {
     if (
@@ -67,13 +116,14 @@ export default function usePaginatedTransactions(
     setError("");
 
     try {
-      const baseQuery = query(
-        collection(db, "transactions"),
-        where("userId", "==", user.uid),
-        where("year", "==", Number(selectedYear)),
-        where("monthIndex", "==", Number(monthIndex)),
-        orderBy("date", "desc"),
-      );
+      const baseQuery = getBaseQuery();
+      if (!baseQuery) {
+        setTransactions([]);
+        setTotalCount(0);
+        setHasNextPage(false);
+        setHasPrevPage(false);
+        return;
+      }
 
       const cursor = pageCursors[page - 1] || null;
       const pageQuery = cursor
@@ -117,7 +167,15 @@ export default function usePaginatedTransactions(
     } finally {
       setLoading(false);
     }
-  }, [monthIndex, page, pageCursors, pageSize, selectedYear, user?.uid]);
+  }, [
+    getBaseQuery,
+    monthIndex,
+    page,
+    pageCursors,
+    pageSize,
+    selectedYear,
+    user?.uid,
+  ]);
 
   useEffect(() => {
     fetchPage();
@@ -139,16 +197,45 @@ export default function usePaginatedTransactions(
     setPage((current) => Math.max(1, current - 1));
   }
 
+  async function goToPage(targetPage) {
+    if (loading) return;
+
+    const parsed = Number(targetPage);
+    if (!Number.isFinite(parsed)) return;
+
+    const clamped = Math.max(1, Math.min(Math.floor(parsed), totalPages));
+    if (clamped === page) return;
+
+    if (clamped < page) {
+      setPage(clamped);
+      return;
+    }
+
+    await ensureCursorForPage(clamped);
+    setPage(clamped);
+  }
+
+  function updatePageSize(nextPageSize) {
+    const parsed = Number(nextPageSize);
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
+    setPageSize(parsed);
+    setPage(1);
+    setPageCursors([null]);
+  }
+
   return {
     transactions,
     loading,
     error,
     page,
+    totalPages,
     hasNextPage,
     hasPrevPage,
     totalCount,
     pageSize,
+    setPageSize: updatePageSize,
     nextPage,
     prevPage,
+    goToPage,
   };
 }
