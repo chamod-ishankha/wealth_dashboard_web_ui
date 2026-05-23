@@ -15,6 +15,7 @@ import TransactionsEntryForm from "./components/TransactionsEntryForm";
 import { useAuth } from "./context/AuthContext";
 import useMonthlySalaries from "./hooks/useMonthlySalaries";
 import useTransactions from "./hooks/useTransactions";
+import usePaginatedTransactions from "./hooks/usePaginatedTransactions";
 import useCategories from "./hooks/useCategories";
 import useInstallments from "./hooks/useInstallments";
 import useUserSettings from "./hooks/useUserSettings";
@@ -86,6 +87,18 @@ export default function App() {
       : "";
 
   const { transactions, loading, error } = useTransactions(user);
+  const {
+    transactions: paginatedTransactions,
+    loading: paginatedLoading,
+    error: paginatedError,
+    page: transactionsPage,
+    hasNextPage,
+    hasPrevPage,
+    totalCount: paginatedTotalCount,
+    pageSize: transactionsPageSize,
+    nextPage,
+    prevPage,
+  } = usePaginatedTransactions(user, selectedYear, selectedMonth, 10);
   const {
     salaryByPeriod: remoteSalaryByPeriod,
     loading: salaryLoading,
@@ -440,6 +453,16 @@ export default function App() {
               salaryDate={salaryDate}
               formatCurrency={formatCurrency}
               transactions={transactions}
+              tableTransactions={paginatedTransactions}
+              tableLoading={paginatedLoading}
+              tableError={paginatedError}
+              transactionsPage={transactionsPage}
+              transactionsPageSize={transactionsPageSize}
+              hasNextPage={hasNextPage}
+              hasPrevPage={hasPrevPage}
+              paginatedTotalCount={paginatedTotalCount}
+              onNextPage={nextPage}
+              onPrevPage={prevPage}
               groupedTransactions={groupedTransactions}
               salaryByPeriod={salaryByPeriod}
               loading={loading || salaryLoading}

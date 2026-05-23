@@ -54,6 +54,16 @@ export default function DashboardSummary({
   salaryDate: salaryDateProp = null,
   formatCurrency,
   transactions = [],
+  tableTransactions = [],
+  tableLoading = false,
+  tableError = "",
+  transactionsPage = 1,
+  transactionsPageSize = 10,
+  hasNextPage = false,
+  hasPrevPage = false,
+  paginatedTotalCount = 0,
+  onNextPage,
+  onPrevPage,
   groupedTransactions = [],
   salaryByPeriod = {},
   loading = false,
@@ -290,82 +300,89 @@ export default function DashboardSummary({
                   </p>
                 </div>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                  {selectedMonthSummary.monthlyTransactions.length}
+                  {paginatedTotalCount ||
+                    selectedMonthSummary.monthlyTransactions.length}
                 </span>
               </div>
             </div>
 
-            {selectedMonthSummary.monthlyTransactions.length > 0 ? (
+            {tableLoading ? (
+              <div className="px-5 py-10 text-center text-sm text-slate-500">
+                Loading paginated transactions...
+              </div>
+            ) : tableError ? (
+              <div className="px-5 py-6 text-sm text-rose-600">
+                {tableError}
+              </div>
+            ) : tableTransactions.length > 0 ? (
               <>
                 {/* MOBILE VIEW */}
                 <div className="block sm:hidden divide-y divide-slate-100">
-                  {selectedMonthSummary.monthlyTransactions.map(
-                    (transaction) => {
-                      const isIncome = transaction.transactionType === "income";
-                      const amountColor = isIncome
-                        ? "text-emerald-600 font-semibold"
-                        : "text-slate-900 font-semibold";
-                      const amountPrefix = isIncome ? "+" : "−";
+                  {tableTransactions.map((transaction) => {
+                    const isIncome = transaction.transactionType === "income";
+                    const amountColor = isIncome
+                      ? "text-emerald-600 font-semibold"
+                      : "text-slate-900 font-semibold";
+                    const amountPrefix = isIncome ? "+" : "−";
 
-                      return (
-                        <div
-                          key={
-                            transaction.id ||
-                            `${transaction.date}-${transaction.category}-${transaction.amount}`
-                          }
-                          className="group flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer active:bg-slate-100"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-3">
-                              <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
-                                <span className="text-sm font-semibold text-slate-600">
-                                  {transaction.category?.[0]?.toUpperCase() ||
-                                    "?"}
-                                </span>
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-slate-900 truncate">
-                                  {transaction.category || "Transaction"}
-                                </p>
-                                <p className="w-[180px] max-w-[180px] truncate text-xs text-slate-500 sm:w-[220px] sm:max-w-[220px]">
-                                  {transaction.description || "No description"}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                  {formatTimestamp(transaction.date)}
-                                </p>
-                              </div>
+                    return (
+                      <div
+                        key={
+                          transaction.id ||
+                          `${transaction.date}-${transaction.category}-${transaction.amount}`
+                        }
+                        className="group flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer active:bg-slate-100"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-3">
+                            <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+                              <span className="text-sm font-semibold text-slate-600">
+                                {transaction.category?.[0]?.toUpperCase() ||
+                                  "?"}
+                              </span>
                             </div>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <p className={`text-sm font-bold ${amountColor}`}>
-                              {amountPrefix}
-                              {formatCurrency(Number(transaction.amount || 0))}
-                            </p>
-                            <div className="mt-1 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                type="button"
-                                onClick={() => onEditTransaction?.(transaction)}
-                                className="inline-flex items-center justify-center h-6 w-6 rounded text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
-                                title="Edit"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  onDeleteTransaction?.(transaction.id)
-                                }
-                                className="inline-flex items-center justify-center h-6 w-6 rounded text-xs font-semibold text-rose-600 hover:bg-rose-100 transition"
-                                title="Delete"
-                              >
-                                🗑️
-                              </button>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-900 truncate">
+                                {transaction.category || "Transaction"}
+                              </p>
+                              <p className="w-[180px] max-w-[180px] truncate text-xs text-slate-500 sm:w-[220px] sm:max-w-[220px]">
+                                {transaction.description || "No description"}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {formatTimestamp(transaction.date)}
+                              </p>
                             </div>
                           </div>
                         </div>
-                      );
-                    },
-                  )}
+                        <div className="shrink-0 text-right">
+                          <p className={`text-sm font-bold ${amountColor}`}>
+                            {amountPrefix}
+                            {formatCurrency(Number(transaction.amount || 0))}
+                          </p>
+                          <div className="mt-1 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => onEditTransaction?.(transaction)}
+                              className="inline-flex items-center justify-center h-6 w-6 rounded text-xs font-semibold text-slate-600 hover:bg-slate-200 transition"
+                              title="Edit"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onDeleteTransaction?.(transaction.id)
+                              }
+                              className="inline-flex items-center justify-center h-6 w-6 rounded text-xs font-semibold text-rose-600 hover:bg-rose-100 transition"
+                              title="Delete"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* DESKTOP VIEW: Fixed width layout with table-fixed & customized column percentages */}
@@ -404,84 +421,114 @@ export default function DashboardSummary({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {selectedMonthSummary.monthlyTransactions.map(
-                        (transaction) => {
-                          const isIncome =
-                            transaction.transactionType === "income";
-                          const amountColor = isIncome
-                            ? "text-emerald-600"
-                            : "text-slate-900";
-                          const amountPrefix = isIncome ? "+" : "−";
+                      {tableTransactions.map((transaction) => {
+                        const isIncome =
+                          transaction.transactionType === "income";
+                        const amountColor = isIncome
+                          ? "text-emerald-600"
+                          : "text-slate-900";
+                        const amountPrefix = isIncome ? "+" : "−";
 
-                          return (
-                            <tr
-                              key={
-                                transaction.id ||
-                                `${transaction.date}-${transaction.category}-${transaction.amount}`
-                              }
-                              className="hover:bg-slate-50 transition-colors"
-                            >
-                              <td className="px-4 py-4 text-slate-600 truncate">
-                                {formatTimestamp(transaction.date)}
-                              </td>
-                              <td className="px-4 py-4 font-medium text-slate-900 truncate">
-                                {transaction.category || "—"}
-                              </td>
-                              <td className="px-4 py-4 text-slate-600">
-                                <div
-                                  className="block w-full min-w-0 truncate"
-                                  title={transaction.description}
-                                >
-                                  {transaction.description || "No description"}
-                                </div>
-                              </td>
-                              <td className="px-4 py-4 whitespace-nowrap">
-                                <span
-                                  className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                    isIncome
-                                      ? "bg-emerald-100 text-emerald-700"
-                                      : "bg-rose-100 text-rose-700"
-                                  }`}
-                                >
-                                  {transaction.transactionType || "transfer"}
-                                </span>
-                              </td>
-                              <td
-                                className={`px-4 py-4 text-right font-semibold ${amountColor}`}
+                        return (
+                          <tr
+                            key={
+                              transaction.id ||
+                              `${transaction.date}-${transaction.category}-${transaction.amount}`
+                            }
+                            className="hover:bg-slate-50 transition-colors"
+                          >
+                            <td className="px-4 py-4 text-slate-600 truncate">
+                              {formatTimestamp(transaction.date)}
+                            </td>
+                            <td className="px-4 py-4 font-medium text-slate-900 truncate">
+                              {transaction.category || "—"}
+                            </td>
+                            <td className="px-4 py-4 text-slate-600">
+                              <div
+                                className="block w-full min-w-0 truncate"
+                                title={transaction.description}
                               >
-                                {amountPrefix}
-                                {formatCurrency(
-                                  Number(transaction.amount || 0),
-                                )}
-                              </td>
-                              <td className="px-4 py-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      onEditTransaction?.(transaction)
-                                    }
-                                    className="text-xs font-semibold text-slate-600 hover:text-slate-900 hover:underline transition"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      onDeleteTransaction?.(transaction.id)
-                                    }
-                                    className="text-xs font-semibold text-rose-600 hover:text-rose-900 hover:underline transition"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        },
-                      )}
+                                {transaction.description || "No description"}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span
+                                className={`inline-flex max-w-full rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                  isIncome
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-rose-100 text-rose-700"
+                                }`}
+                              >
+                                {transaction.transactionType || "transfer"}
+                              </span>
+                            </td>
+                            <td
+                              className={`px-4 py-4 text-right font-semibold ${amountColor}`}
+                            >
+                              {amountPrefix}
+                              {formatCurrency(Number(transaction.amount || 0))}
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onEditTransaction?.(transaction)
+                                  }
+                                  className="text-xs font-semibold text-slate-600 hover:text-slate-900 hover:underline transition"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onDeleteTransaction?.(transaction.id)
+                                  }
+                                  className="text-xs font-semibold text-rose-600 hover:text-rose-900 hover:underline transition"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3">
+                  <p className="text-xs text-slate-500">
+                    Page {transactionsPage}
+                    {paginatedTotalCount > 0
+                      ? ` • ${Math.min(
+                          (transactionsPage - 1) * transactionsPageSize + 1,
+                          paginatedTotalCount,
+                        )}-${Math.min(
+                          transactionsPage * transactionsPageSize,
+                          paginatedTotalCount,
+                        )} of ${paginatedTotalCount}`
+                      : ""}
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onPrevPage?.()}
+                      disabled={!hasPrevPage || tableLoading}
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNextPage?.()}
+                      disabled={!hasNextPage || tableLoading}
+                      className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
