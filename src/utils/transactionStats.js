@@ -159,6 +159,14 @@ export function calculateMonthlySummary(
 
   const totalExpenses = personalExpenses + fixedExpenses;
 
+  const totalTransfer = sumTransactions(monthlyTransactions, (transaction) => {
+    const transactionType = String(
+      transaction.transactionType || getTransactionType(transaction.category),
+    ).toLowerCase();
+
+    return transactionType === "transfer";
+  });
+
   const configuredSalary =
     Number.isFinite(Number(salaryOverride)) && Number(salaryOverride) > 0
       ? Number(salaryOverride)
@@ -167,7 +175,7 @@ export function calculateMonthlySummary(
   // Monthly income = configured base salary + income transactions for the period.
   const monthlySalary = configuredSalary + totalIncome;
 
-  const netSavings = monthlySalary - totalExpenses;
+  const netSavings = monthlySalary - (totalExpenses + totalTransfer);
 
   // Budget limit applies only to Personal expenses
   const remainingBudget = budgetLimit - personalExpenses;
@@ -176,6 +184,7 @@ export function calculateMonthlySummary(
     monthlyTransactions,
     totalIncome,
     totalExpenses,
+    totalTransfer,
     personalExpenses,
     fixedExpenses,
     monthlySalary,

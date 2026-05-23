@@ -298,15 +298,25 @@ export default function DashboardSummary({
       </div>
 
       {/* STAT GRID */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           label="Monthly Income"
           value={formatCurrency(selectedMonthSummary.monthlySalary || 0)}
           accent="blue"
         />
         <StatCard
-          label="Total Expenses"
+          label="Income Transactions"
+          value={formatCurrency(selectedMonthSummary.totalIncome || 0)}
+          accent="emerald"
+        />
+        <StatCard
+          label="Expense Transactions"
           value={formatCurrency(selectedMonthSummary.totalExpenses)}
+          accent="rose"
+        />
+        <StatCard
+          label="Transfer Transactions"
+          value={formatCurrency(selectedMonthSummary.totalTransfer || 0)}
           accent="amber"
         />
         <StatCard
