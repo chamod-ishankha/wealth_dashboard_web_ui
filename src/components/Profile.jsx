@@ -67,7 +67,7 @@ export default function Profile() {
       <div className="max-w-[1220px] mx-auto w-full">
         <button
           type="button"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/dashboard")}
           className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium text-sm mb-6 transition-colors hover:-translate-x-1"
         >
           <svg

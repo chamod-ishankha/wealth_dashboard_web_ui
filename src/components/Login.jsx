@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Brand from "./Brand";
 
 export default function Login() {
   const { login } = useAuth();
@@ -17,7 +18,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate("/");
+      navigate("/dashboard");
     } catch (loginError) {
       setError(loginError.message || "Unable to sign in.");
     } finally {
@@ -29,6 +30,9 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
         <div className="mb-8 text-center">
+          <div className="mb-4 flex justify-center">
+            <Brand to="/" size="lg" />
+          </div>
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
             Welcome back
           </p>
@@ -36,7 +40,7 @@ export default function Login() {
             Sign in to your account
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Continue managing your personal finance tracker.
+            Continue managing your Wealth dashboard.
           </p>
           <p className="mt-4 text-sm text-slate-600">
             Don't have an account?{" "}

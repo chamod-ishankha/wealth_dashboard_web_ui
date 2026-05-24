@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { updateProfile } from "firebase/auth";
 import { useAuth } from "../context/AuthContext";
+import Brand from "./Brand";
 
 export default function Register() {
   const { register } = useAuth();
@@ -41,11 +42,14 @@ export default function Register() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
         <div className="mb-8 text-center">
+          <div className="mb-4 flex justify-center">
+            <Brand to="/" size="lg" />
+          </div>
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
             Create account
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-            Register for Finance Tracker
+            Register for Wealth
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             Save your profile and start tracking transactions.

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Brand from "./Brand";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -23,12 +24,7 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <Link
-          to="/"
-          className="text-lg font-semibold tracking-tight text-slate-950"
-        >
-          Finance Tracker
-        </Link>
+        <Brand to="/dashboard" size="md" />
 
         <div className="relative">
           <button
